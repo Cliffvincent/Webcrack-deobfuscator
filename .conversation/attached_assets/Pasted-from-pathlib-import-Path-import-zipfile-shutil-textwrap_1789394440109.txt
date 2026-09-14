@@ -1,0 +1,909 @@
+from pathlib import Path
+import zipfile, shutil, textwrap, os
+
+base = Path("/mnt/data/xenon-booster")
+public = base / "public"
+public.mkdir(parents=True, exist_ok=True)
+
+files = {
+"package.json": r'''{
+  "name": "xenon-booster",
+  "version": "1.0.0",
+  "description": "Xenon Booster SMM panel powered by a Node.js API proxy",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "axios": "^1.11.0",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0"
+  }
+}''',
+".env": r'''PORT=3000
+API_URL=https://nikoxsmm.site/api/v2
+API_KEY=8a6f67934244065033ec2f5ac269a99a''',
+".env.example": r'''PORT=3000
+API_URL=https://nikoxsmm.site/api/v2
+API_KEY=YOUR_API_KEY''',
+".gitignore": r'''node_modules
+.env
+npm-debug.log
+.DS_Store''',
+"server.js": r'''const express = require("express");
+const axios = require("axios");
+const path = require("path");
+require("dotenv").config();
+
+const app = express();
+const PORT = Number(process.env.PORT || 3000);
+const API_URL = process.env.API_URL || "https://nikoxsmm.site/api/v2";
+const API_KEY = process.env.API_KEY;
+
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, "public")));
+
+function clean(value) {
+  return value === undefined || value === null ? "" : String(value).trim();
+}
+
+async function provider(data) {
+  if (!API_KEY) {
+    const error = new Error("API key is not configured");
+    error.status = 500;
+    throw error;
+  }
+
+  const payload = new URLSearchParams();
+  payload.append("key", API_KEY);
+
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== undefined && value !== null && value !== "") {
+      payload.append(key, String(value));
+    }
+  }
+
+  const response = await axios.post(API_URL, payload.toString(), {
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Accept": "application/json"
+    },
+    timeout: 30000,
+    validateStatus: () => true
+  });
+
+  if (response.status < 200 || response.status >= 300) {
+    const error = new Error(`Provider returned HTTP ${response.status}`);
+    error.status = 502;
+    error.provider = response.data;
+    throw error;
+  }
+
+  return response.data;
+}
+
+function sendError(res, error) {
+  const status = error.status || 500;
+  res.status(status).json({
+    error: error.message || "Request failed",
+    provider: error.provider ?? null
+  });
+}
+
+app.get("/api/health", async (req, res) => {
+  try {
+    const data = await provider({ action: "balance" });
+    res.json({ ok: true, balance: data });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.get("/api/services", async (req, res) => {
+  try {
+    res.json(await provider({ action: "services" }));
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.get("/api/balance", async (req, res) => {
+  try {
+    res.json(await provider({ action: "balance" }));
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.post("/api/order", async (req, res) => {
+  try {
+    const service = clean(req.body.service);
+    const link = clean(req.body.link);
+    const quantity = clean(req.body.quantity);
+
+    if (!service || !link || !quantity) {
+      return res.status(400).json({ error: "service, link and quantity are required" });
+    }
+
+    res.json(await provider({
+      action: "add",
+      service,
+      link,
+      quantity
+    }));
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.get("/api/status/:order", async (req, res) => {
+  try {
+    const order = clean(req.params.order);
+    if (!order) return res.status(400).json({ error: "order is required" });
+    res.json(await provider({ action: "status", order }));
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.post("/api/status", async (req, res) => {
+  try {
+    const orders = clean(req.body.orders);
+    if (!orders) return res.status(400).json({ error: "orders is required" });
+    const list = orders.split(",").map(v => v.trim()).filter(Boolean).slice(0, 100);
+    if (!list.length) return res.status(400).json({ error: "No valid order IDs supplied" });
+    res.json(await provider({ action: "status", orders: list.join(",") }));
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.post("/api/refill", async (req, res) => {
+  try {
+    const order = clean(req.body.order);
+    if (!order) return res.status(400).json({ error: "order is required" });
+    res.json(await provider({ action: "refill", order }));
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.post("/api/refill-multiple", async (req, res) => {
+  try {
+    const orders = clean(req.body.orders);
+    if (!orders) return res.status(400).json({ error: "orders is required" });
+    const list = orders.split(",").map(v => v.trim()).filter(Boolean).slice(0, 100);
+    if (!list.length) return res.status(400).json({ error: "No valid order IDs supplied" });
+    res.json(await provider({ action: "refill", orders: list.join(",") }));
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.get("/api/refill-status/:refill", async (req, res) => {
+  try {
+    const refill = clean(req.params.refill);
+    if (!refill) return res.status(400).json({ error: "refill is required" });
+    res.json(await provider({ action: "refill_status", refill }));
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.post("/api/refill-status", async (req, res) => {
+  try {
+    const refills = clean(req.body.refills);
+    if (!refills) return res.status(400).json({ error: "refills is required" });
+    const list = refills.split(",").map(v => v.trim()).filter(Boolean).slice(0, 100);
+    if (!list.length) return res.status(400).json({ error: "No valid refill IDs supplied" });
+    res.json(await provider({ action: "refill_status", refills: list.join(",") }));
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+app.listen(PORT, () => {
+  console.log(`Xenon Booster running on http://localhost:${PORT}`);
+});''',
+"public/index.html": r'''<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#050615">
+  <title>Xenon Booster</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="orb orb-one"></div>
+  <div class="orb orb-two"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#">
+      <div class="brand-mark">
+        <span>⚡</span>
+      </div>
+      <div>
+        <div class="brand-name">XENON</div>
+        <div class="brand-sub">BOOSTER</div>
+      </div>
+    </a>
+    <div class="top-actions">
+      <div class="balance-pill">
+        <span class="pulse"></span>
+        <span>Balance</span>
+        <strong id="topBalance">Loading...</strong>
+      </div>
+      <button class="icon-btn" id="refreshBtn" title="Refresh">↻</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow"><span></span> NEXT GENERATION BOOSTING PANEL</div>
+        <h1>POWER YOUR<br><em>SOCIAL GROWTH</em></h1>
+        <p>Fast, clean and powerful ordering with live service data from Xenon Booster.</p>
+        <div class="hero-stats">
+          <div><strong id="serviceCount">0</strong><span>Services</span></div>
+          <div><strong>24/7</strong><span>Automation</span></div>
+          <div><strong>API</strong><span>Connected</span></div>
+        </div>
+      </div>
+      <div class="hero-logo">
+        <div class="energy-ring"></div>
+        <div class="crown">♛</div>
+        <div class="bolt">⚡</div>
+        <div class="hero-word">XENON</div>
+        <div class="hero-word-small">BOOSTER</div>
+      </div>
+    </section>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="order">New Order</button>
+      <button class="tab" data-tab="orders">Order Status</button>
+      <button class="tab" data-tab="refills">Refills</button>
+      <button class="tab" data-tab="services">Services</button>
+    </nav>
+
+    <section class="panel tab-panel active" id="orderPanel">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">CREATE ORDER</div>
+          <h2>Launch a new boost</h2>
+        </div>
+        <div class="status-dot"><span></span> API ONLINE</div>
+      </div>
+
+      <div class="order-layout">
+        <form id="orderForm" class="form-card">
+          <label>Service</label>
+          <div class="select-wrap">
+            <select id="serviceSelect" required>
+              <option value="">Loading services...</option>
+            </select>
+          </div>
+
+          <div class="service-preview" id="servicePreview">
+            <div class="preview-main">
+              <span class="preview-icon">✦</span>
+              <div>
+                <strong id="previewName">Select a service</strong>
+                <span id="previewCategory">Choose from the available services</span>
+              </div>
+            </div>
+            <div class="preview-meta">
+              <span>Rate <b id="previewRate">—</b></span>
+              <span>Min <b id="previewMin">—</b></span>
+              <span>Max <b id="previewMax">—</b></span>
+            </div>
+          </div>
+
+          <label>Link</label>
+          <input id="linkInput" type="url" placeholder="https://..." required>
+
+          <label>Quantity</label>
+          <input id="quantityInput" type="number" min="1" placeholder="Enter quantity" required>
+
+          <div class="charge-box">
+            <span>Estimated charge</span>
+            <strong id="charge">0.00000 USD</strong>
+          </div>
+
+          <button class="primary-btn" type="submit">
+            <span>⚡</span> PLACE ORDER
+          </button>
+          <div class="form-message" id="orderMessage"></div>
+        </form>
+
+        <aside class="side-card">
+          <div class="side-glow"></div>
+          <div class="side-icon">✦</div>
+          <h3>Built for speed</h3>
+          <p>Your API key stays on the Node.js server. The browser only communicates with your protected local API routes.</p>
+          <div class="feature-list">
+            <div><span>✓</span> Live service catalog</div>
+            <div><span>✓</span> Instant order creation</div>
+            <div><span>✓</span> Single & bulk status</div>
+            <div><span>✓</span> Refill management</div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="panel tab-panel" id="ordersPanel">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">TRACK ORDERS</div>
+          <h2>Order status</h2>
+        </div>
+      </div>
+      <form id="statusForm" class="inline-form">
+        <input id="ordersInput" placeholder="Order IDs, e.g. 23501 or 23501,23502,23503" required>
+        <button class="primary-btn compact" type="submit">CHECK STATUS</button>
+      </form>
+      <div class="result-grid" id="statusResults"></div>
+    </section>
+
+    <section class="panel tab-panel" id="refillsPanel">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">REFILL CENTER</div>
+          <h2>Manage refills</h2>
+        </div>
+      </div>
+      <div class="tool-grid">
+        <form class="mini-card" id="refillForm">
+          <h3>Create refill</h3>
+          <p>Request a refill for one order.</p>
+          <input id="refillOrder" placeholder="Order ID" required>
+          <button class="primary-btn compact" type="submit">CREATE REFILL</button>
+          <div class="form-message" id="refillMessage"></div>
+        </form>
+        <form class="mini-card" id="refillMultiForm">
+          <h3>Multiple refills</h3>
+          <p>Up to 100 order IDs separated by commas.</p>
+          <input id="refillOrders" placeholder="23501,23502,23503" required>
+          <button class="primary-btn compact" type="submit">CREATE MULTIPLE</button>
+          <div class="form-message" id="refillMultiMessage"></div>
+        </form>
+        <form class="mini-card" id="refillStatusForm">
+          <h3>Refill status</h3>
+          <p>Check one or multiple refill IDs.</p>
+          <input id="refillIds" placeholder="1 or 1,2,3" required>
+          <button class="primary-btn compact" type="submit">CHECK STATUS</button>
+          <div class="form-message" id="refillStatusMessage"></div>
+        </form>
+      </div>
+      <pre class="json-box" id="refillResult">Results will appear here.</pre>
+    </section>
+
+    <section class="panel tab-panel" id="servicesPanel">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">LIVE CATALOG</div>
+          <h2>All services</h2>
+        </div>
+        <input class="search" id="serviceSearch" placeholder="Search services...">
+      </div>
+      <div class="category-row" id="categoryRow"></div>
+      <div class="service-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Service</th>
+              <th>Type</th>
+              <th>Category</th>
+              <th>Rate / 1K</th>
+              <th>Min</th>
+              <th>Max</th>
+              <th>Refill</th>
+              <th>Cancel</th>
+            </tr>
+          </thead>
+          <tbody id="servicesBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <footer>XENON BOOSTER <span>•</span> NODE.JS POWERED PANEL</footer>
+  <script src="/app.js"></script>
+</body>
+</html>''',
+"public/style.css": r''':root{
+  --bg:#03040f;
+  --bg2:#080b22;
+  --panel:rgba(8,11,32,.78);
+  --panel2:rgba(12,16,43,.86);
+  --line:rgba(92,126,255,.22);
+  --cyan:#16eaff;
+  --blue:#386cff;
+  --purple:#9b36ff;
+  --pink:#ff2bd6;
+  --text:#f5f8ff;
+  --muted:#8e9bbd;
+  --good:#39ffb0;
+  --danger:#ff5b86;
+  --shadow:0 0 45px rgba(27,93,255,.16);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:radial-gradient(circle at 50% -20%,#142b83 0,#080a21 28%,var(--bg) 62%);color:var(--text);font-family:Inter,Arial,sans-serif;min-height:100vh;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background:linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);background-size:45px 45px;mask-image:linear-gradient(to bottom,#000,transparent 90%);z-index:-2}
+.bg-grid{position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(0,234,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,234,255,.04) 1px,transparent 1px);background-size:70px 70px;transform:perspective(700px) rotateX(55deg) translateY(35%);transform-origin:center bottom;opacity:.32;z-index:-1}
+.orb{position:fixed;width:420px;height:420px;border-radius:50%;filter:blur(100px);opacity:.14;pointer-events:none;z-index:-1}
+.orb-one{top:80px;left:-180px;background:var(--cyan)}
+.orb-two{right:-180px;top:420px;background:var(--purple)}
+.topbar{height:82px;border-bottom:1px solid rgba(108,142,255,.16);background:rgba(2,4,15,.74);backdrop-filter:blur(18px);display:flex;align-items:center;justify-content:space-between;padding:0 max(22px,calc((100% - 1240px)/2));position:sticky;top:0;z-index:20}
+.brand{display:flex;align-items:center;gap:12px;color:white;text-decoration:none}
+.brand-mark{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(145deg,#092a72,#101039);border:1px solid rgba(30,234,255,.7);box-shadow:0 0 24px rgba(22,234,255,.28),inset 0 0 20px rgba(45,91,255,.35);font-size:23px}
+.brand-name{font:800 20px Orbitron,sans-serif;letter-spacing:4px}
+.brand-sub{font:800 9px Orbitron,sans-serif;letter-spacing:5px;color:var(--cyan);margin-top:2px}
+.top-actions{display:flex;align-items:center;gap:10px}
+.balance-pill{display:flex;align-items:center;gap:8px;background:rgba(20,28,67,.78);border:1px solid rgba(91,132,255,.28);border-radius:999px;padding:10px 15px;font-size:12px;color:var(--muted)}
+.balance-pill strong{color:white;font-size:13px}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 10px var(--good)}
+.icon-btn{width:40px;height:40px;border-radius:12px;background:rgba(16,21,52,.85);border:1px solid var(--line);color:white;font-size:21px;cursor:pointer}
+.container{max-width:1240px;margin:auto;padding:34px 22px 60px}
+.hero{min-height:455px;display:grid;grid-template-columns:1fr 470px;align-items:center;gap:30px}
+.eyebrow{font:700 11px Orbitron,sans-serif;color:#9db5ff;letter-spacing:2px;display:flex;align-items:center;gap:8px}
+.eyebrow span{width:22px;height:2px;background:linear-gradient(90deg,var(--cyan),var(--pink));box-shadow:0 0 10px var(--cyan)}
+.hero h1{font:900 clamp(42px,6vw,76px) Orbitron,sans-serif;line-height:.98;letter-spacing:-2px;margin:18px 0}
+.hero h1 em{font-style:normal;background:linear-gradient(90deg,#fff 0%,#4ef7ff 40%,#b23dff 78%,#ff44dc 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 35px rgba(53,129,255,.22)}
+.hero-copy p{max-width:570px;color:var(--muted);font-size:16px;line-height:1.7;margin:0 0 28px}
+.hero-stats{display:flex;gap:28px}
+.hero-stats div{display:flex;flex-direction:column;gap:4px;padding-right:28px;border-right:1px solid rgba(111,139,255,.2)}
+.hero-stats div:last-child{border:0}
+.hero-stats strong{font:800 21px Orbitron;color:white}
+.hero-stats span{font-size:10px;color:#7180a8;text-transform:uppercase;letter-spacing:1.6px}
+.hero-logo{height:390px;position:relative;display:grid;place-items:center;isolation:isolate}
+.energy-ring{position:absolute;width:340px;height:340px;border-radius:50%;border:3px solid transparent;background:linear-gradient(#050719,#050719) padding-box,linear-gradient(130deg,var(--cyan),#326cff 48%,var(--pink)) border-box;box-shadow:0 0 35px rgba(22,234,255,.25),0 0 70px rgba(156,54,255,.18);animation:spin 16s linear infinite}
+.energy-ring:before{content:"";position:absolute;inset:13px;border-radius:50%;border:1px solid rgba(77,142,255,.35)}
+.crown{position:absolute;top:48px;font-size:82px;color:white;text-shadow:0 0 8px #fff,0 0 20px var(--cyan),0 0 35px var(--purple);transform:scaleX(1.1)}
+.bolt{position:absolute;left:73px;top:140px;font-size:95px;transform:rotate(-8deg);color:#dffeff;text-shadow:0 0 8px white,0 0 18px var(--cyan),0 0 35px #346cff}
+.hero-word{position:absolute;top:166px;font:900 61px Orbitron,sans-serif;letter-spacing:-4px;background:linear-gradient(#fff,#8edfff 48%,#4b6dff);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 15px rgba(68,147,255,.3);left:92px}
+.hero-word-small{position:absolute;top:237px;left:111px;font:900 39px Orbitron,sans-serif;font-style:italic;letter-spacing:1px;background:linear-gradient(90deg,#6df9ff,#fff,#cf40ff);-webkit-background-clip:text;background-clip:text;color:transparent;transform:skewX(-12deg);text-shadow:0 0 22px rgba(112,62,255,.5)}
+.tabs{display:flex;gap:8px;margin:6px 0 18px;overflow:auto;padding-bottom:4px}
+.tab{white-space:nowrap;border:1px solid var(--line);background:rgba(10,14,38,.7);color:#8998be;padding:12px 18px;border-radius:11px;font:700 11px Orbitron;letter-spacing:1px;cursor:pointer;transition:.2s}
+.tab:hover,.tab.active{color:white;border-color:rgba(22,234,255,.6);background:linear-gradient(90deg,rgba(22,234,255,.1),rgba(148,51,255,.1));box-shadow:0 0 20px rgba(22,234,255,.08)}
+.panel{background:linear-gradient(145deg,rgba(10,14,39,.88),rgba(5,7,24,.8));border:1px solid rgba(100,130,255,.2);border-radius:22px;box-shadow:var(--shadow);backdrop-filter:blur(18px);padding:26px}
+.tab-panel{display:none}
+.tab-panel.active{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:.2;transform:translateY(5px)}to{opacity:1;transform:none}}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:23px}
+.section-kicker{font:700 9px Orbitron;color:var(--cyan);letter-spacing:2px;margin-bottom:6px}
+h2{font:800 25px Orbitron;margin:0;letter-spacing:-.5px}
+.status-dot{font:700 9px Orbitron;color:#7c8bae;display:flex;gap:8px;align-items:center}
+.status-dot span{width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 12px var(--good)}
+.order-layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(260px,.65fr);gap:18px}
+.form-card,.side-card,.mini-card{background:rgba(6,9,29,.7);border:1px solid rgba(95,126,255,.17);border-radius:17px;padding:21px}
+label{display:block;font-size:10px;font-weight:800;color:#8e9bbc;letter-spacing:1.1px;text-transform:uppercase;margin:0 0 8px}
+select,input{width:100%;height:50px;border:1px solid rgba(104,134,255,.24);background:#080c25;color:white;border-radius:11px;padding:0 14px;outline:none;font:500 14px Inter;transition:.2s}
+select:focus,input:focus{border-color:rgba(22,234,255,.7);box-shadow:0 0 0 3px rgba(22,234,255,.07)}
+.select-wrap{margin-bottom:15px}
+input{margin-bottom:15px}
+.service-preview{display:flex;justify-content:space-between;gap:15px;align-items:center;padding:14px;border-radius:12px;background:linear-gradient(100deg,rgba(25,72,130,.2),rgba(102,40,160,.12));border:1px solid rgba(76,136,255,.15);margin:-1px 0 17px}
+.preview-main{display:flex;align-items:center;gap:11px;min-width:0}
+.preview-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:rgba(22,234,255,.1);color:var(--cyan)}
+.preview-main div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.preview-main strong{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.preview-main span{font-size:10px;color:#7888ad}
+.preview-meta{display:flex;gap:13px;flex-wrap:wrap;justify-content:flex-end}
+.preview-meta span{font-size:9px;color:#7888ad}
+.preview-meta b{display:block;color:#dfe8ff;font-size:11px;margin-top:3px}
+.charge-box{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;margin-bottom:13px;border:1px dashed rgba(22,234,255,.25);border-radius:11px;background:rgba(22,234,255,.035)}
+.charge-box span{font-size:11px;color:#8a98ba}
+.charge-box strong{font:700 13px Orbitron;color:var(--cyan)}
+.primary-btn{width:100%;height:50px;border:0;border-radius:11px;color:white;background:linear-gradient(100deg,#087cff,#5c31ff 55%,#d42aff);font:800 11px Orbitron;letter-spacing:1.2px;cursor:pointer;box-shadow:0 8px 25px rgba(72,57,255,.23);transition:.2s}
+.primary-btn:hover{transform:translateY(-1px);box-shadow:0 12px 30px rgba(72,57,255,.35)}
+.primary-btn:disabled{opacity:.5;cursor:wait;transform:none}
+.primary-btn.compact{width:auto;padding:0 22px;white-space:nowrap}
+.form-message{min-height:18px;margin-top:9px;font-size:11px;color:#94a3c7}
+.form-message.good{color:var(--good)}
+.form-message.bad{color:var(--danger)}
+.side-card{position:relative;overflow:hidden;padding:27px}
+.side-glow{position:absolute;width:170px;height:170px;border-radius:50%;right:-60px;top:-70px;background:var(--purple);filter:blur(70px);opacity:.18}
+.side-icon{width:50px;height:50px;display:grid;place-items:center;border-radius:15px;background:linear-gradient(145deg,rgba(0,217,255,.17),rgba(173,44,255,.18));border:1px solid rgba(55,226,255,.2);color:var(--cyan);font-size:22px}
+.side-card h3{font:800 19px Orbitron;margin:20px 0 9px}
+.side-card p{font-size:12px;line-height:1.7;color:#7786a9;margin:0}
+.feature-list{display:grid;gap:13px;margin-top:24px}
+.feature-list div{font-size:11px;color:#b6c2dd}
+.feature-list span{color:var(--good);margin-right:8px}
+.inline-form{display:flex;gap:10px;margin-bottom:18px}
+.inline-form input{margin:0}
+.result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.result-card{background:rgba(5,8,26,.75);border:1px solid rgba(96,128,255,.18);border-radius:14px;padding:17px}
+.result-card .result-id{font:800 11px Orbitron;color:var(--cyan);margin-bottom:13px}
+.result-row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:11px}
+.result-row:last-child{border:0}
+.result-row span{color:#7887aa}
+.result-row b{color:#dce7ff;text-align:right}
+.mini-card h3{font:700 14px Orbitron;margin:0 0 7px}
+.mini-card p{font-size:11px;color:#7180a2;min-height:34px;line-height:1.5}
+.mini-card input{margin:0 0 10px}
+.tool-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+.json-box{margin-top:18px;min-height:90px;white-space:pre-wrap;overflow:auto;padding:15px;border-radius:12px;background:#030514;border:1px solid rgba(100,130,255,.15);color:#a9c3ff;font:12px ui-monospace,SFMono-Regular,Consolas,monospace}
+.search{max-width:300px;margin:0}
+.category-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:15px}
+.category-btn{border:1px solid rgba(96,128,255,.18);background:rgba(8,12,34,.7);color:#8190b3;border-radius:9px;padding:8px 11px;font-size:10px;cursor:pointer}
+.category-btn.active{color:white;border-color:rgba(22,234,255,.5);box-shadow:0 0 15px rgba(22,234,255,.08)}
+.service-table-wrap{overflow:auto;border:1px solid rgba(96,128,255,.13);border-radius:13px}
+table{width:100%;border-collapse:collapse;min-width:900px}
+th{font:700 9px Orbitron;color:#687799;letter-spacing:1px;text-align:left;text-transform:uppercase;background:rgba(14,19,50,.8);padding:13px}
+td{padding:13px;font-size:11px;color:#b4c1dd;border-top:1px solid rgba(255,255,255,.04)}
+td:first-child{color:var(--cyan);font-family:Orbitron}
+.service-name{color:white;font-weight:700}
+.badge{font-size:9px;padding:5px 7px;border-radius:999px;background:rgba(57,255,176,.07);color:var(--good);border:1px solid rgba(57,255,176,.14)}
+.badge.no{color:#ff718e;background:rgba(255,91,134,.06);border-color:rgba(255,91,134,.14)}
+.toast{position:fixed;right:20px;bottom:20px;z-index:40;max-width:360px;padding:13px 15px;background:#0a0f2b;border:1px solid rgba(22,234,255,.3);box-shadow:0 12px 40px rgba(0,0,0,.45),0 0 20px rgba(22,234,255,.08);border-radius:12px;color:white;font-size:12px;transform:translateY(120px);opacity:0;transition:.25s}
+.toast.show{transform:none;opacity:1}
+footer{text-align:center;padding:18px;color:#485676;font:700 8px Orbitron;letter-spacing:2px}
+footer span{color:var(--cyan);margin:0 5px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:900px){
+  .hero{grid-template-columns:1fr;min-height:auto;padding:35px 0 25px}
+  .hero-logo{height:300px;order:-1;transform:scale(.78);margin:-30px 0 -20px}
+  .order-layout{grid-template-columns:1fr}
+  .tool-grid{grid-template-columns:1fr}
+}
+@media(max-width:620px){
+  .topbar{height:70px;padding:0 14px}
+  .brand-mark{width:38px;height:38px}
+  .brand-name{font-size:16px;letter-spacing:3px}
+  .brand-sub{font-size:7px}
+  .balance-pill span:not(.pulse){display:none}
+  .container{padding:20px 13px 45px}
+  .hero h1{font-size:39px}
+  .hero-copy p{font-size:13px}
+  .hero-stats{gap:15px}
+  .hero-stats div{padding-right:14px}
+  .hero-stats strong{font-size:16px}
+  .panel{padding:16px;border-radius:17px}
+  .section-head{align-items:flex-start;flex-direction:column}
+  .search{max-width:none}
+  .service-preview{align-items:flex-start;flex-direction:column}
+  .preview-meta{justify-content:flex-start}
+  .inline-form{flex-direction:column}
+  .primary-btn.compact{width:100%}
+  .hero-logo{transform:scale(.63);margin:-70px 0 -70px}
+}
+''',
+"public/app.js": r'''const state = {
+  services: [],
+  category: "All"
+};
+
+const $ = id => document.getElementById(id);
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  }[char]));
+}
+
+async function request(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+  const data = await response.json().catch(() => ({ error: "Invalid server response" }));
+  if (!response.ok || data.error) {
+    const message = data.error || "Request failed";
+    const error = new Error(message);
+    error.data = data;
+    throw error;
+  }
+  return data;
+}
+
+function showToast(message, bad = false) {
+  const toast = $("toast");
+  toast.textContent = message;
+  toast.style.borderColor = bad ? "rgba(255,91,134,.4)" : "rgba(22,234,255,.4)";
+  toast.classList.add("show");
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => toast.classList.remove("show"), 3200);
+}
+
+function setMessage(id, message, good = false) {
+  const el = $(id);
+  el.textContent = message;
+  el.className = `form-message ${good ? "good" : "bad"}`;
+}
+
+async function loadBalance() {
+  try {
+    const data = await request("/api/balance");
+    $("topBalance").textContent = `${Number(data.balance || 0).toFixed(5)} ${data.currency || "USD"}`;
+  } catch {
+    $("topBalance").textContent = "Unavailable";
+  }
+}
+
+async function loadServices() {
+  const select = $("serviceSelect");
+  select.innerHTML = `<option value="">Loading services...</option>`;
+  try {
+    const data = await request("/api/services");
+    state.services = Array.isArray(data) ? data : [];
+    $("serviceCount").textContent = state.services.length;
+    renderSelect();
+    renderCategories();
+    renderServices();
+  } catch (error) {
+    select.innerHTML = `<option value="">Unable to load services</option>`;
+    showToast(error.message, true);
+  }
+}
+
+function renderSelect() {
+  const select = $("serviceSelect");
+  const current = select.value;
+  select.innerHTML = `<option value="">Select a service</option>` + state.services.map(service => {
+    const label = `${service.service} — ${service.name} — ${service.category}`;
+    return `<option value="${escapeHtml(service.service)}">${escapeHtml(label)}</option>`;
+  }).join("");
+  if (state.services.some(s => String(s.service) === current)) select.value = current;
+  updatePreview();
+}
+
+function selectedService() {
+  return state.services.find(service => String(service.service) === String($("serviceSelect").value));
+}
+
+function updatePreview() {
+  const service = selectedService();
+  if (!service) {
+    $("previewName").textContent = "Select a service";
+    $("previewCategory").textContent = "Choose from the available services";
+    $("previewRate").textContent = "—";
+    $("previewMin").textContent = "—";
+    $("previewMax").textContent = "—";
+    $("charge").textContent = "0.00000 USD";
+    $("quantityInput").removeAttribute("min");
+    $("quantityInput").removeAttribute("max");
+    return;
+  }
+  $("previewName").textContent = service.name || "Service";
+  $("previewCategory").textContent = `${service.category || "Uncategorized"} • ${service.type || "Default"}`;
+  $("previewRate").textContent = `${service.rate} USD`;
+  $("previewMin").textContent = service.min;
+  $("previewMax").textContent = service.max;
+  $("quantityInput").min = Number(service.min || 1);
+  $("quantityInput").max = Number(service.max || 999999999);
+  const quantity = Number($("quantityInput").value || 0);
+  const rate = Number(service.rate || 0);
+  $("charge").textContent = `${((quantity * rate) / 1000).toFixed(5)} USD`;
+}
+
+function renderCategories() {
+  const categories = ["All", ...new Set(state.services.map(s => s.category || "Uncategorized"))];
+  $("categoryRow").innerHTML = categories.map(category =>
+    `<button class="category-btn ${category === state.category ? "active" : ""}" data-category="${escapeHtml(category)}">${escapeHtml(category)}</button>`
+  ).join("");
+  document.querySelectorAll(".category-btn").forEach(button => {
+    button.addEventListener("click", () => {
+      state.category = button.dataset.category;
+      renderCategories();
+      renderServices();
+    });
+  });
+}
+
+function renderServices() {
+  const query = $("serviceSearch").value.toLowerCase().trim();
+  const rows = state.services.filter(service => {
+    const categoryMatch = state.category === "All" || (service.category || "Uncategorized") === state.category;
+    const text = `${service.service} ${service.name} ${service.type} ${service.category}`.toLowerCase();
+    return categoryMatch && text.includes(query);
+  });
+
+  $("servicesBody").innerHTML = rows.length ? rows.map(service => `
+    <tr>
+      <td>${escapeHtml(service.service)}</td>
+      <td><span class="service-name">${escapeHtml(service.name)}</span></td>
+      <td>${escapeHtml(service.type)}</td>
+      <td>${escapeHtml(service.category)}</td>
+      <td>${escapeHtml(service.rate)}</td>
+      <td>${escapeHtml(service.min)}</td>
+      <td>${escapeHtml(service.max)}</td>
+      <td><span class="badge ${service.refill ? "" : "no"}">${service.refill ? "YES" : "NO"}</span></td>
+      <td><span class="badge ${service.cancel ? "" : "no"}">${service.cancel ? "YES" : "NO"}</span></td>
+    </tr>
+  `).join("") : `<tr><td colspan="9">No services found.</td></tr>`;
+}
+
+function switchTab(name) {
+  document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.tab === name));
+  document.querySelectorAll(".tab-panel").forEach(panel => panel.classList.remove("active"));
+  $(`${name}Panel`).classList.add("active");
+}
+
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => switchTab(tab.dataset.tab));
+});
+
+$("refreshBtn").addEventListener("click", async () => {
+  $("refreshBtn").disabled = true;
+  await Promise.all([loadBalance(), loadServices()]);
+  $("refreshBtn").disabled = false;
+  showToast("Panel data refreshed");
+});
+
+$("serviceSelect").addEventListener("change", updatePreview);
+$("quantityInput").addEventListener("input", updatePreview);
+$("serviceSearch").addEventListener("input", renderServices);
+
+$("orderForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const service = selectedService();
+  const link = $("linkInput").value.trim();
+  const quantity = Number($("quantityInput").value);
+  if (!service) return setMessage("orderMessage", "Please select a service.");
+  if (!link) return setMessage("orderMessage", "Please enter a link.");
+  if (!Number.isFinite(quantity) || quantity < Number(service.min) || quantity > Number(service.max)) {
+    return setMessage("orderMessage", `Quantity must be between ${service.min} and ${service.max}.`);
+  }
+
+  const button = event.submitter;
+  button.disabled = true;
+  setMessage("orderMessage", "Submitting order...", true);
+
+  try {
+    const data = await request("/api/order", {
+      method: "POST",
+      body: JSON.stringify({
+        service: service.service,
+        link,
+        quantity
+      })
+    });
+    const orderId = data.order;
+    setMessage("orderMessage", `Order #${orderId} created successfully.`, true);
+    showToast(`Order #${orderId} created`);
+    $("linkInput").value = "";
+    $("quantityInput").value = "";
+    updatePreview();
+    await loadBalance();
+    switchTab("orders");
+    $("ordersInput").value = orderId;
+    await checkStatus(orderId);
+  } catch (error) {
+    setMessage("orderMessage", error.message);
+    showToast(error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+async function checkStatus(ids) {
+  const list = ids.split(",").map(v => v.trim()).filter(Boolean).slice(0, 100);
+  if (!list.length) throw new Error("Enter at least one order ID.");
+  const data = await request("/api/status", {
+    method: "POST",
+    body: JSON.stringify({ orders: list.join(",") })
+  });
+  renderStatuses(data);
+  return data;
+}
+
+function renderStatuses(data) {
+  const entries = Object.entries(data);
+  $("statusResults").innerHTML = entries.map(([id, item]) => {
+    if (item && item.error) {
+      return `<div class="result-card"><div class="result-id">ORDER #${escapeHtml(id)}</div><div class="result-row"><span>Error</span><b>${escapeHtml(item.error)}</b></div></div>`;
+    }
+    return `<div class="result-card">
+      <div class="result-id">ORDER #${escapeHtml(id)}</div>
+      <div class="result-row"><span>Status</span><b>${escapeHtml(item.status)}</b></div>
+      <div class="result-row"><span>Charge</span><b>${escapeHtml(item.charge)} ${escapeHtml(item.currency)}</b></div>
+      <div class="result-row"><span>Start count</span><b>${escapeHtml(item.start_count)}</b></div>
+      <div class="result-row"><span>Remains</span><b>${escapeHtml(item.remains)}</b></div>
+    </div>`;
+  }).join("");
+}
+
+$("statusForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  try {
+    await checkStatus($("ordersInput").value);
+    showToast("Order status updated");
+  } catch (error) {
+    showToast(error.message, true);
+  }
+});
+
+$("refillForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const button = event.submitter;
+  button.disabled = true;
+  setMessage("refillMessage", "Creating refill...", true);
+  try {
+    const data = await request("/api/refill", {
+      method: "POST",
+      body: JSON.stringify({ order: $("refillOrder").value.trim() })
+    });
+    $("refillResult").textContent = JSON.stringify(data, null, 2);
+    setMessage("refillMessage", `Refill created: ${data.refill ?? "done"}`, true);
+    showToast("Refill created");
+  } catch (error) {
+    setMessage("refillMessage", error.message);
+    showToast(error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$("refillMultiForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const button = event.submitter;
+  button.disabled = true;
+  setMessage("refillMultiMessage", "Creating refills...", true);
+  try {
+    const data = await request("/api/refill-multiple", {
+      method: "POST",
+      body: JSON.stringify({ orders: $("refillOrders").value.trim() })
+    });
+    $("refillResult").textContent = JSON.stringify(data, null, 2);
+    setMessage("refillMultiMessage", "Multiple refill request completed.", true);
+    showToast("Multiple refills processed");
+  } catch (error) {
+    setMessage("refillMultiMessage", error.message);
+    showToast(error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$("refillStatusForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const button = event.submitter;
+  button.disabled = true;
+  setMessage("refillStatusMessage", "Checking...", true);
+  try {
+    const data = await request("/api/refill-status", {
+      method: "POST",
+      body: JSON.stringify({ refills: $("refillIds").value.trim() })
+    });
+    $("refillResult").textContent = JSON.stringify(data, null, 2);
+    setMessage("refillStatusMessage", "Refill status updated.", true);
+    showToast("Refill status updated");
+  } catch (error) {
+    setMessage("refillStatusMessage", error.message);
+    showToast(error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+loadBalance();
+loadServices();''',
+"README.md": r'''# Xenon Booster
+
+Node.js SMM panel using the provider API at `https://nikoxsmm.site/api/v2`.
+
+## Setup
+
+```bash
+npm install
+npm start
