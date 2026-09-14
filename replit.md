@@ -1,44 +1,50 @@
-# [Project name]
+# Xenon Booster
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Xenon Booster is a Node.js and Express control panel for browsing social growth services, placing orders, tracking status, and managing refills through a protected provider proxy.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/xenon-booster run dev` — run the Xenon Booster Node.js app
+- `pnpm --filter @workspace/api-server run dev` — run the shared API server
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required env: `API_KEY` — provider API key, stored as a Replit Secret
+- Optional env: `API_URL` — provider API endpoint (defaults to the Xenon endpoint in the app)
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- pnpm workspaces, Node.js 24
+- App: Express 5, Axios, dotenv
+- Frontend: static HTML, CSS, and browser JavaScript served by Express
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/xenon-booster/server.js` — Express server and provider proxy routes
+- `artifacts/xenon-booster/public/` — static panel UI
+- `artifacts/xenon-booster/.env.example` — non-secret environment template
+- The provider key stays server-side; browser calls use `/booster-api/*`
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The app is intentionally plain Node.js/Express; the generated React/Vite starter was removed.
+- Provider requests are proxied server-side so the API key is never sent to the browser.
+- The `/booster-api/*` prefix avoids the shared workspace API service mounted at `/api`.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- View live services and account balance when the provider key is configured.
+- Place new orders with service-aware quantity limits and estimated charges.
+- Check one or multiple order statuses.
+- Create single or bulk refills and inspect refill status responses.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- The user requested a Node.js app rather than the Python generator or React/Vite starter template.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Without `API_KEY`, provider endpoints intentionally return a clear 503 configuration error.
+- Use the artifact workflow for the app; its production runner starts `server.js` directly.
 
 ## Pointers
 

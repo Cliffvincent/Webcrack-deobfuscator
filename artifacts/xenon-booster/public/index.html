@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#070816" />
+    <meta name="description" content="Xenon Booster social growth control panel." />
+    <title>Xenon Booster</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="background-grid"></div>
+    <header class="topbar">
+      <a class="brand" href="/">
+        <span class="brand-mark">X</span>
+        <span><strong>XENON</strong><small>BOOSTER</small></span>
+      </a>
+      <div class="top-actions">
+        <div class="balance-pill"><span class="live-dot"></span><span>Balance</span><strong id="topBalance">Unavailable</strong></div>
+        <button class="icon-button" id="refreshBtn" title="Refresh panel" type="button">↻</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <div>
+          <p class="eyebrow"><span></span> SOCIAL GROWTH CONTROL</p>
+          <h1>Move fast.<br /><em>Grow louder.</em></h1>
+          <p class="hero-copy">A focused control panel for launching, tracking, and maintaining your social growth orders.</p>
+          <div class="hero-stats">
+            <div><strong id="serviceCount">—</strong><span>Live services</span></div>
+            <div><strong>24/7</strong><span>Automation</span></div>
+            <div><strong>API</strong><span>Protected proxy</span></div>
+          </div>
+        </div>
+        <div class="hero-emblem" aria-hidden="true">
+          <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+          <div class="emblem-core"><span>✦</span><b>X</b></div>
+          <div class="emblem-label">XENON<br /><small>BOOSTER</small></div>
+        </div>
+      </section>
+
+      <nav class="tabs" aria-label="Panel sections">
+        <button class="tab active" data-tab="order" type="button">New order</button>
+        <button class="tab" data-tab="orders" type="button">Order status</button>
+        <button class="tab" data-tab="refills" type="button">Refills</button>
+        <button class="tab" data-tab="services" type="button">Services</button>
+      </nav>
+
+      <section class="panel tab-panel active" id="orderPanel">
+        <div class="section-heading"><div><p class="kicker">CREATE ORDER</p><h2>Launch a new boost</h2></div><span class="status"><i></i> API ONLINE</span></div>
+        <div class="order-layout">
+          <form class="form-card" id="orderForm">
+            <label for="serviceSelect">Service</label>
+            <select id="serviceSelect" required><option value="">Loading services...</option></select>
+            <div class="service-preview">
+              <div class="preview-title"><span class="preview-icon">✦</span><span><strong id="previewName">Select a service</strong><small id="previewCategory">Choose from the available services</small></span></div>
+              <div class="preview-meta"><span>Rate <b id="previewRate">—</b></span><span>Min <b id="previewMin">—</b></span><span>Max <b id="previewMax">—</b></span></div>
+            </div>
+            <label for="linkInput">Link</label>
+            <input id="linkInput" type="url" placeholder="https://..." required />
+            <label for="quantityInput">Quantity</label>
+            <input id="quantityInput" type="number" min="1" placeholder="Enter quantity" required />
+            <div class="charge-box"><span>Estimated charge</span><strong id="charge">0.00000 USD</strong></div>
+            <button class="primary-button" type="submit"><span>↗</span> PLACE ORDER</button>
+            <p class="form-message" id="orderMessage"></p>
+          </form>
+          <aside class="side-card">
+            <span class="side-mark">✦</span><p class="kicker">BUILT FOR SPEED</p><h3>Everything important, one move away.</h3>
+            <p class="side-copy">Your provider key stays on the Node.js server. The browser only talks to protected local routes.</p>
+            <ul><li>Live service catalog</li><li>Instant order creation</li><li>Single and bulk status</li><li>Refill management</li></ul>
+          </aside>
+        </div>
+      </section>
+
+      <section class="panel tab-panel" id="ordersPanel">
+        <div class="section-heading"><div><p class="kicker">TRACK ORDERS</p><h2>Order status</h2></div></div>
+        <form class="inline-form" id="statusForm"><input id="ordersInput" placeholder="Order IDs, e.g. 23501,23502" required /><button class="primary-button compact" type="submit">CHECK STATUS</button></form>
+        <div class="result-grid" id="statusResults"><div class="empty-state">Enter an order ID to see its live status.</div></div>
+      </section>
+
+      <section class="panel tab-panel" id="refillsPanel">
+        <div class="section-heading"><div><p class="kicker">REFILL CENTER</p><h2>Manage refills</h2></div></div>
+        <div class="tool-grid">
+          <form class="mini-card" id="refillForm"><p class="kicker">ONE ORDER</p><h3>Create refill</h3><p>Request a refill for one order.</p><input id="refillOrder" placeholder="Order ID" required /><button class="primary-button compact" type="submit">CREATE REFILL</button><p class="form-message" id="refillMessage"></p></form>
+          <form class="mini-card" id="refillMultiForm"><p class="kicker">BATCH ACTION</p><h3>Multiple refills</h3><p>Up to 100 order IDs separated by commas.</p><input id="refillOrders" placeholder="23501,23502,23503" required /><button class="primary-button compact" type="submit">CREATE MULTIPLE</button><p class="form-message" id="refillMultiMessage"></p></form>
+          <form class="mini-card" id="refillStatusForm"><p class="kicker">LOOKUP</p><h3>Refill status</h3><p>Check one or multiple refill IDs.</p><input id="refillIds" placeholder="1 or 1,2,3" required /><button class="primary-button compact" type="submit">CHECK STATUS</button><p class="form-message" id="refillStatusMessage"></p></form>
+        </div>
+        <pre class="json-box" id="refillResult">Results will appear here.</pre>
+      </section>
+
+      <section class="panel tab-panel" id="servicesPanel">
+        <div class="section-heading"><div><p class="kicker">LIVE CATALOG</p><h2>All services</h2></div><input class="search" id="serviceSearch" placeholder="Search services..." /></div>
+        <div class="category-row" id="categoryRow"></div>
+        <div class="table-wrap"><table><thead><tr><th>ID</th><th>Service</th><th>Type</th><th>Category</th><th>Rate / 1K</th><th>Min</th><th>Max</th><th>Refill</th><th>Cancel</th></tr></thead><tbody id="servicesBody"></tbody></table></div>
+      </section>
+    </main>
+    <div class="toast" id="toast"></div>
+    <footer>XENON BOOSTER <span>•</span> NODE.JS POWERED PANEL</footer>
+    <script src="/app.js"></script>
+  </body>
+</html>
