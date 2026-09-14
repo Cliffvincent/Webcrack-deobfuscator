@@ -6,7 +6,7 @@ require("dotenv").config();
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const API_URL = process.env.API_URL || "https://nikoxsmm.site/api/v2";
-const API_KEY = process.env.API_KEY;
+const API_KEY = "8a6f67934244065033ec2f5ac269a99a";
 
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
