@@ -58,7 +58,7 @@ const PORT = Number(process.env.PORT || 3000);
 
 
 
-const API_URL = process.env.API_URL || "https://nikoxsmm.site/api/v2";
+/** const API_URL = process.env.API_URL || "https://nikoxsmm.site/api/v2";
 const API_KEY = process.env.API_KEY || "8a6f67934244065033ec2f5ac269a99a";
 const ADMIN_USER = "yazkyxyz";
 const ADMIN_PASS = "yazky123";
@@ -394,7 +394,7 @@ app.post("/api/refill-status", async (req, res) => {
   } catch (error) {
     sendError(res, error);
   }
-});
+}); **/
 
 app.get("/xenon-booster.png", (req, res) => {
   res.sendFile(
