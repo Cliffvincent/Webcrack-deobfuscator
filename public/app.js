@@ -1,138 +1,1525 @@
-const state = { services: [], category: "All" };
-const $ = (id) => document.getElementById(id);
+const $ = id => document.getElementById(id);
 
-function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[char]);
+let services = [];
+let activeCategory = "All";
+let activePlatform = "all";
+
+const serviceSelect = $("serviceSelect");
+const quantityInput = $("quantityInput");
+const linkInput = $("linkInput");
+const chargeEl = $("charge");
+
+function showToast(message, type = "") {
+  const toast = $("toast");
+  if (!toast) return;
+
+  toast.textContent = message;
+  toast.className = `toast show ${type}`;
+
+  clearTimeout(window.toastTimer);
+
+  window.toastTimer = setTimeout(() => {
+    toast.className = "toast";
+  }, 3000);
 }
 
-async function request(url, options = {}) {
-  const response = await fetch(url, { ...options, headers: { "Content-Type": "application/json", ...(options.headers || {}) } });
-  const data = await response.json().catch(() => ({ error: "Invalid server response" }));
-  if (!response.ok || data.error) throw Object.assign(new Error(data.error || "Request failed"), { data });
+function setMessage(id, message, type = "") {
+  const el = $(id);
+  if (!el) return;
+
+  el.textContent = message;
+  el.className = `form-message ${type}`;
+}
+
+async function api(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    credentials: "same-origin",
+    headers: {
+      ...(options.body ? {
+        "Content-Type": "application/json"
+      } : {}),
+      ...(options.headers || {})
+    }
+  });
+
+  const text = await response.text();
+
+  let data;
+
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(text || `HTTP ${response.status}`);
+  }
+
+  if (response.status === 401) {
+    logoutUI();
+    throw new Error("Authorization required.");
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      data.error ||
+      data.message ||
+      `HTTP ${response.status}`
+    );
+  }
+
+  if (data && data.error) {
+    throw new Error(data.error);
+  }
+
   return data;
 }
 
-function showToast(message, bad = false) {
-  const toast = $("toast");
-  toast.textContent = message;
-  toast.classList.toggle("bad", bad);
-  toast.classList.add("show");
-  clearTimeout(showToast.timer);
-  showToast.timer = setTimeout(() => toast.classList.remove("show"), 3200);
+function logoutUI() {
+  $("appContent").classList.add("hidden");
+  $("loginScreen").classList.remove("hidden");
 }
 
-function setMessage(id, message, good = false) {
-  const element = $(id);
-  element.textContent = message;
-  element.className = `form-message ${good ? "good" : "bad"}`;
+async function checkAuth() {
+  try {
+    const data = await fetch("/api/auth", {
+      credentials: "same-origin"
+    }).then(response => response.json());
+
+    if (data.authenticated) {
+      $("loginScreen").classList.add("hidden");
+      $("appContent").classList.remove("hidden");
+      await startApp();
+    } else {
+      $("loginScreen").classList.remove("hidden");
+      $("appContent").classList.add("hidden");
+    }
+  } catch {
+    $("loginScreen").classList.remove("hidden");
+    $("appContent").classList.add("hidden");
+  }
+}
+
+async function login(event) {
+  event.preventDefault();
+
+  const username = $("loginUsername").value.trim();
+  const password = $("loginPassword").value;
+
+  setMessage("loginMessage", "Authorizing...");
+
+  try {
+    await api("/api/login", {
+      method: "POST",
+      body: JSON.stringify({
+        username,
+        password
+      })
+    });
+
+    $("loginForm").reset();
+    $("loginScreen").classList.add("hidden");
+    $("appContent").classList.remove("hidden");
+
+    setMessage("loginMessage", "");
+
+    await startApp();
+
+    showToast("Access granted", "good");
+  } catch (error) {
+    setMessage(
+      "loginMessage",
+      error.message || "Invalid credentials.",
+      "bad"
+    );
+  }
+}
+
+async function logout() {
+  try {
+    await fetch("/api/logout", {
+      method: "POST",
+      credentials: "same-origin"
+    });
+  } finally {
+    logoutUI();
+    showToast("Logged out");
+  }
+}
+
+function detectServicePlatform(service) {
+  const name = String(service?.name || "")
+    .replace(/&amp;/gi, "&")
+    .trim()
+    .toLowerCase();
+
+  if (/\binstagram\b/.test(name)) {
+    return "instagram";
+  }
+
+  if (/\btiktok\b|\btik\s*tok\b/.test(name)) {
+    return "tiktok";
+  }
+
+  if (/\bfacebook\b/.test(name)) {
+    return "facebook";
+  }
+
+  if (/\byoutube\b/.test(name)) {
+    return "youtube";
+  }
+
+  if (/\btelegram\b/.test(name)) {
+    return "telegram";
+  }
+
+  if (
+    /\btwitter\b/.test(name) ||
+    /\bx\.com\b/.test(name) ||
+    /\btweets?\b/.test(name)
+  ) {
+    return "twitter";
+  }
+
+  if (/\bspotify\b/.test(name)) {
+    return "spotify";
+  }
+
+  if (/\bdiscord\b/.test(name)) {
+    return "discord";
+  }
+
+  if (/\bthreads\b/.test(name)) {
+    return "threads";
+  }
+
+  if (/\blinkedin\b/.test(name)) {
+    return "linkedin";
+  }
+
+  if (/\bpinterest\b/.test(name)) {
+    return "pinterest";
+  }
+
+  if (/\breddit\b/.test(name)) {
+    return "reddit";
+  }
+
+  return "other";
+}
+
+function getPlatformName(platform) {
+  const names = {
+    all: "All",
+    facebook: "Facebook",
+    youtube: "YouTube",
+    instagram: "Instagram",
+    tiktok: "TikTok",
+    telegram: "Telegram",
+    twitter: "X / Twitter",
+    spotify: "Spotify",
+    discord: "Discord",
+    threads: "Threads",
+    linkedin: "LinkedIn",
+    pinterest: "Pinterest",
+    reddit: "Reddit",
+    other: "Other"
+  };
+
+  return names[platform] || "Other";
+}
+
+function getServiceCategory(service) {
+  const category = String(service?.category || "").trim();
+
+  if (category) {
+    return category;
+  }
+
+  return getPlatformName(
+    detectServicePlatform(service)
+  );
+}
+
+function getSelectedService() {
+  return services.find(
+    service =>
+      String(service.service) ===
+      String(serviceSelect.value)
+  );
+}
+
+function updateCharge() {
+  const service = getSelectedService();
+  const quantity = Number(quantityInput.value);
+
+  if (
+    !service ||
+    !Number.isFinite(quantity) ||
+    quantity <= 0
+  ) {
+    chargeEl.textContent = "0.00000 USD";
+    return;
+  }
+
+  const rate = Number(
+    String(service.rate ?? "")
+      .replace(/,/g, "")
+  );
+
+  if (!Number.isFinite(rate)) {
+    chargeEl.textContent = "0.00000 USD";
+    return;
+  }
+
+  const charge = quantity * rate / 1000;
+
+  chargeEl.textContent =
+    `${charge.toFixed(5)} USD`;
+}
+
+function updateServicePreview() {
+  const service = getSelectedService();
+
+  const name = $("previewName");
+  const category = $("previewCategory");
+  const rate = $("previewRate");
+  const min = $("previewMin");
+  const max = $("previewMax");
+
+  if (!service) {
+    name.textContent = "Select a service";
+    category.textContent =
+      "Choose from the available services";
+    rate.textContent = "—";
+    min.textContent = "—";
+    max.textContent = "—";
+
+    quantityInput.removeAttribute("min");
+    quantityInput.removeAttribute("max");
+
+    updateCharge();
+    return;
+  }
+
+  name.textContent =
+    service.name || "Service";
+
+  category.textContent =
+    getServiceCategory(service);
+
+  const numericRate = Number(
+    String(service.rate ?? "")
+      .replace(/,/g, "")
+  );
+
+  rate.textContent =
+    Number.isFinite(numericRate)
+      ? `${numericRate.toFixed(5)} / 1K`
+      : `${service.rate || "—"} / 1K`;
+
+  min.textContent =
+    service.min || "—";
+
+  max.textContent =
+    service.max || "—";
+
+  quantityInput.min =
+    service.min || 1;
+
+  quantityInput.max =
+    service.max || "";
+
+  const currentQuantity =
+    Number(quantityInput.value);
+
+  const numericMin =
+    Number(service.min);
+
+  const numericMax =
+    Number(service.max);
+
+  if (
+    currentQuantity &&
+    (
+      (
+        Number.isFinite(numericMin) &&
+        currentQuantity < numericMin
+      ) ||
+      (
+        Number.isFinite(numericMax) &&
+        currentQuantity > numericMax
+      )
+    )
+  ) {
+    quantityInput.value = "";
+  }
+
+  updateCharge();
+}
+
+function serviceMatchesPlatform(service, platform) {
+  if (!platform || platform === "all") {
+    return true;
+  }
+
+  return detectServicePlatform(service) === platform;
+}
+
+function serviceMatchesCategory(service, category) {
+  if (!category || category === "All") {
+    return true;
+  }
+
+  return getServiceCategory(service) === category;
+}
+
+function filteredServices() {
+  const search = $("serviceSearch");
+
+  const query = search
+    ? search.value.trim().toLowerCase()
+    : "";
+
+  return services.filter(service => {
+    const categoryMatch =
+      serviceMatchesCategory(
+        service,
+        activeCategory
+      );
+
+    const platformMatch =
+      serviceMatchesPlatform(
+        service,
+        activePlatform
+      );
+
+    const text = [
+      service.service,
+      service.name,
+      service.type,
+      service.category,
+      getServiceCategory(service),
+      service.rate,
+      service.min,
+      service.max
+    ]
+      .filter(value =>
+        value !== null &&
+        value !== undefined
+      )
+      .join(" ")
+      .toLowerCase();
+
+    return (
+      categoryMatch &&
+      platformMatch &&
+      text.includes(query)
+    );
+  });
+}
+
+function renderServiceSelect() {
+  if (!serviceSelect) return;
+
+  const previous =
+    serviceSelect.value;
+
+  serviceSelect.innerHTML = "";
+
+  const first =
+    document.createElement("option");
+
+  first.value = "";
+
+  first.textContent =
+    activePlatform === "all"
+      ? "Select a service"
+      : `Select ${getPlatformName(activePlatform)} service`;
+
+  serviceSelect.appendChild(first);
+
+  const list = filteredServices();
+
+  if (!list.length) {
+    const empty =
+      document.createElement("option");
+
+    empty.value = "";
+    empty.textContent =
+      "No services available";
+
+    serviceSelect.appendChild(empty);
+
+    updateServicePreview();
+    return;
+  }
+
+  const groups = new Map();
+
+  list.forEach(service => {
+    const category =
+      getServiceCategory(service);
+
+    if (!groups.has(category)) {
+      groups.set(category, []);
+    }
+
+    groups.get(category).push(service);
+  });
+
+  groups.forEach((groupServices, category) => {
+    const group =
+      document.createElement("optgroup");
+
+    group.label = category;
+
+    groupServices.forEach(service => {
+      const option =
+        document.createElement("option");
+
+      option.value =
+        service.service;
+
+      const numericRate =
+        Number(
+          String(service.rate ?? "")
+            .replace(/,/g, "")
+        );
+
+      const rateText =
+        Number.isFinite(numericRate)
+          ? numericRate.toFixed(5)
+          : service.rate || "0";
+
+      option.textContent =
+        `${service.service} — ${service.name} • ${rateText}/1K`;
+
+      option.dataset.service =
+        service.service;
+
+      option.dataset.platform =
+        detectServicePlatform(service);
+
+      option.dataset.category =
+        category;
+
+      group.appendChild(option);
+    });
+
+    serviceSelect.appendChild(group);
+  });
+
+  const exists = [...serviceSelect.options]
+    .some(
+      option =>
+        String(option.value) ===
+        String(previous)
+    );
+
+  if (exists) {
+    serviceSelect.value = previous;
+  }
+
+  updateServicePreview();
+}
+
+function renderCategories() {
+  const row = $("categoryRow");
+
+  if (!row) return;
+
+  const categories = [
+    "All",
+    ...new Set(
+      services.map(service =>
+        getServiceCategory(service)
+      )
+    )
+  ];
+
+  row.innerHTML = "";
+
+  categories.forEach(category => {
+    const button =
+      document.createElement("button");
+
+    button.type = "button";
+
+    button.className =
+      `category-btn ${
+        category === activeCategory
+          ? "active"
+          : ""
+      }`;
+
+    button.textContent = category;
+
+    button.addEventListener("click", () => {
+      activeCategory = category;
+
+      renderCategories();
+      renderServices();
+      renderServiceSelect();
+    });
+
+    row.appendChild(button);
+  });
+}
+
+function renderServices() {
+  const body = $("servicesBody");
+
+  if (!body) return;
+
+  const filtered =
+    filteredServices();
+
+  body.innerHTML = "";
+
+  if (!filtered.length) {
+    const row =
+      document.createElement("tr");
+
+    row.innerHTML = `
+      <td colspan="9" class="empty-services">
+        No services found for this platform.
+      </td>
+    `;
+
+    body.appendChild(row);
+    return;
+  }
+
+  filtered.forEach(service => {
+    const row =
+      document.createElement("tr");
+
+    const platform =
+      detectServicePlatform(service);
+
+    const category =
+      getServiceCategory(service);
+
+    const refill =
+      service.refill === true ||
+      String(service.refill).toLowerCase() === "true" ||
+      String(service.refill).toLowerCase() === "yes";
+
+    const cancel =
+      service.cancel === true ||
+      String(service.cancel).toLowerCase() === "true" ||
+      String(service.cancel).toLowerCase() === "yes";
+
+    row.innerHTML = `
+      <td>${escapeHtml(service.service)}</td>
+      <td class="service-name">${escapeHtml(service.name)}</td>
+      <td>${escapeHtml(service.type)}</td>
+      <td>${escapeHtml(category)}</td>
+      <td>${escapeHtml(service.rate)}</td>
+      <td>${escapeHtml(service.min)}</td>
+      <td>${escapeHtml(service.max)}</td>
+      <td>
+        <span class="badge ${refill ? "" : "no"}">
+          ${refill ? "YES" : "NO"}
+        </span>
+      </td>
+      <td>
+        <span class="badge ${cancel ? "" : "no"}">
+          ${cancel ? "YES" : "NO"}
+        </span>
+      </td>
+    `;
+
+    row.dataset.platform = platform;
+
+    body.appendChild(row);
+  });
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+async function loadServices() {
+  try {
+    const data =
+      await api("/api/services");
+
+    services =
+      Array.isArray(data)
+        ? data
+        : Array.isArray(data.services)
+          ? data.services
+          : [];
+
+    services = services.filter(
+      service =>
+        service &&
+        service.service !== undefined &&
+        service.name
+    );
+
+    $("serviceCount").textContent =
+      services.length;
+
+    activeCategory = "All";
+
+    renderCategories();
+    renderServices();
+    renderServiceSelect();
+
+  } catch (error) {
+    console.error(error);
+
+    serviceSelect.innerHTML = `
+      <option value="">
+        Unable to load services
+      </option>
+    `;
+
+    showToast(
+      error.message ||
+      "Failed to load services",
+      "bad"
+    );
+  }
 }
 
 async function loadBalance() {
   try {
-    const data = await request("/booster-api/balance");
-    $("topBalance").textContent = `${Number(data.balance || 0).toFixed(5)} ${data.currency || "USD"}`;
-  } catch { $("topBalance").textContent = "Unavailable"; }
-}
+    const data =
+      await api("/api/balance");
 
-async function loadServices() {
-  $("serviceSelect").innerHTML = "<option value=''>Loading services...</option>";
-  try {
-    const data = await request("/booster-api/services");
-    state.services = Array.isArray(data) ? data : [];
-    $("serviceCount").textContent = state.services.length;
-    renderSelect(); renderCategories(); renderServices();
+    const balance =
+      Number(
+        String(data.balance ?? "")
+          .replace(/,/g, "")
+      );
+
+    $("topBalance").textContent =
+      Number.isFinite(balance)
+        ? `${balance.toFixed(5)} ${data.currency || "USD"}`
+        : `${data.balance || "0.00000"} ${data.currency || "USD"}`;
+
   } catch (error) {
-    $("serviceSelect").innerHTML = "<option value=''>Provider unavailable</option>";
-    $("serviceCount").textContent = "—";
-    showToast(error.message, true);
+    console.error(error);
+
+    $("topBalance").textContent =
+      "Unavailable";
   }
 }
 
-function renderSelect() {
-  const select = $("serviceSelect");
-  const current = select.value;
-  select.innerHTML = `<option value="">Select a service</option>${state.services.map((service) => `<option value="${escapeHtml(service.service)}">${escapeHtml(`${service.service} — ${service.name || "Service"} — ${service.category || "General"}`)}</option>`).join("")}`;
-  if (state.services.some((service) => String(service.service) === current)) select.value = current;
-  updatePreview();
-}
+async function refreshAll() {
+  const button =
+    $("refreshBtn");
 
-function selectedService() { return state.services.find((service) => String(service.service) === String($("serviceSelect").value)); }
-
-function updatePreview() {
-  const service = selectedService();
-  if (!service) {
-    $("previewName").textContent = "Select a service"; $("previewCategory").textContent = "Choose from the available services";
-    $("previewRate").textContent = "—"; $("previewMin").textContent = "—"; $("previewMax").textContent = "—"; $("charge").textContent = "0.00000 USD";
-    $("quantityInput").removeAttribute("min"); $("quantityInput").removeAttribute("max"); return;
+  if (button) {
+    button.disabled = true;
+    button.classList.add("spinning");
   }
-  $("previewName").textContent = service.name || "Service";
-  $("previewCategory").textContent = `${service.category || "Uncategorized"} • ${service.type || "Default"}`;
-  $("previewRate").textContent = `${service.rate ?? "—"} USD`; $("previewMin").textContent = service.min ?? "—"; $("previewMax").textContent = service.max ?? "—";
-  $("quantityInput").min = Number(service.min || 1); $("quantityInput").max = Number(service.max || 999999999);
-  $("charge").textContent = `${((Number($("quantityInput").value || 0) * Number(service.rate || 0)) / 1000).toFixed(5)} USD`;
-}
 
-function renderCategories() {
-  const categories = ["All", ...new Set(state.services.map((service) => service.category || "Uncategorized"))];
-  $("categoryRow").innerHTML = categories.map((category) => `<button class="category-btn ${category === state.category ? "active" : ""}" data-category="${escapeHtml(category)}" type="button">${escapeHtml(category)}</button>`).join("");
-  document.querySelectorAll(".category-btn").forEach((button) => button.addEventListener("click", () => { state.category = button.dataset.category; renderCategories(); renderServices(); }));
-}
-
-function renderServices() {
-  const query = $("serviceSearch").value.toLowerCase().trim();
-  const rows = state.services.filter((service) => (state.category === "All" || (service.category || "Uncategorized") === state.category) && `${service.service} ${service.name} ${service.type} ${service.category}`.toLowerCase().includes(query));
-  $("servicesBody").innerHTML = rows.length ? rows.map((service) => `<tr><td>${escapeHtml(service.service)}</td><td class="service-name">${escapeHtml(service.name)}</td><td>${escapeHtml(service.type)}</td><td>${escapeHtml(service.category)}</td><td>${escapeHtml(service.rate)}</td><td>${escapeHtml(service.min)}</td><td>${escapeHtml(service.max)}</td><td><span class="badge ${service.refill ? "" : "no"}">${service.refill ? "YES" : "NO"}</span></td><td><span class="badge ${service.cancel ? "" : "no"}">${service.cancel ? "YES" : "NO"}</span></td></tr>`).join("") : "<tr><td colspan='9'>No services found.</td></tr>";
-}
-
-function switchTab(name) {
-  document.querySelectorAll(".tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.tab === name));
-  document.querySelectorAll(".tab-panel").forEach((panel) => panel.classList.remove("active"));
-  $(`${name}Panel`).classList.add("active");
-}
-
-document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => switchTab(tab.dataset.tab)));
-$("refreshBtn").addEventListener("click", async () => { $("refreshBtn").disabled = true; await Promise.all([loadBalance(), loadServices()]); $("refreshBtn").disabled = false; showToast("Panel data refreshed"); });
-$("serviceSelect").addEventListener("change", updatePreview);
-$("quantityInput").addEventListener("input", updatePreview);
-$("serviceSearch").addEventListener("input", renderServices);
-
-$("orderForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const service = selectedService(); const link = $("linkInput").value.trim(); const quantity = Number($("quantityInput").value);
-  if (!service) return setMessage("orderMessage", "Please select a service.");
-  if (!link) return setMessage("orderMessage", "Please enter a link.");
-  if (!Number.isFinite(quantity) || quantity < Number(service.min) || quantity > Number(service.max)) return setMessage("orderMessage", `Quantity must be between ${service.min} and ${service.max}.`);
-  const button = event.submitter; button.disabled = true; setMessage("orderMessage", "Submitting order...", true);
   try {
-    const data = await request("/booster-api/order", { method: "POST", body: JSON.stringify({ service: service.service, link, quantity }) });
-    setMessage("orderMessage", `Order #${data.order ?? "created"} created successfully.`, true); showToast(`Order #${data.order ?? "created"} created`);
-    $("linkInput").value = ""; $("quantityInput").value = ""; updatePreview(); await loadBalance();
-    if (data.order) { switchTab("orders"); $("ordersInput").value = data.order; await checkStatus(String(data.order)); }
-  } catch (error) { setMessage("orderMessage", error.message); showToast(error.message, true); } finally { button.disabled = false; }
-});
+    await Promise.all([
+      loadServices(),
+      loadBalance()
+    ]);
 
-async function checkStatus(ids) {
-  const list = ids.split(",").map((value) => value.trim()).filter(Boolean).slice(0, 100);
-  if (!list.length) throw new Error("Enter at least one order ID.");
-  const data = await request("/booster-api/status", { method: "POST", body: JSON.stringify({ orders: list.join(",") }) });
-  renderStatuses(data); return data;
+    showToast(
+      "Data refreshed",
+      "good"
+    );
+
+  } catch (error) {
+    showToast(
+      error.message ||
+      "Refresh failed",
+      "bad"
+    );
+  }
+
+  setTimeout(() => {
+    if (button) {
+      button.disabled = false;
+      button.classList.remove("spinning");
+    }
+  }, 450);
 }
 
-function renderStatuses(data) {
-  $("statusResults").innerHTML = Object.entries(data).map(([id, item]) => `<div class="result-card"><div class="result-id">ORDER #${escapeHtml(id)}</div><div class="result-row"><span>Status</span><b>${escapeHtml(item?.status ?? item?.error ?? "Received")}</b></div><div class="result-row"><span>Charge</span><b>${escapeHtml(item?.charge ?? "—")} ${escapeHtml(item?.currency ?? "")}</b></div><div class="result-row"><span>Start count</span><b>${escapeHtml(item?.start_count ?? "—")}</b></div><div class="result-row"><span>Remains</span><b>${escapeHtml(item?.remains ?? "—")}</b></div></div>`).join("");
+function setupTabs() {
+  const tabs =
+    document.querySelectorAll(".tab");
+
+  const panels =
+    document.querySelectorAll(".tab-panel");
+
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      const target =
+        tab.dataset.tab;
+
+      tabs.forEach(item => {
+        item.classList.toggle(
+          "active",
+          item === tab
+        );
+      });
+
+      panels.forEach(panel => {
+        panel.classList.toggle(
+          "active",
+          panel.id === `${target}Panel`
+        );
+      });
+
+      const tabsElement =
+        document.querySelector(".tabs");
+
+      window.scrollTo({
+        top: tabsElement
+          ? tabsElement.offsetTop - 90
+          : 0,
+        behavior: "smooth"
+      });
+    });
+  });
 }
 
-$("statusForm").addEventListener("submit", async (event) => { event.preventDefault(); try { await checkStatus($("ordersInput").value); showToast("Order status updated"); } catch (error) { showToast(error.message, true); } });
+function setPlatform(platform) {
+  activePlatform =
+    platform || "all";
 
-async function submitRefill(formId, messageId, resultMessage, endpoint, payload) {
-  const form = $(formId); const button = form.querySelector("button"); button.disabled = true; setMessage(messageId, "Working...", true);
-  try { const data = await request(endpoint, { method: "POST", body: JSON.stringify(payload()) }); $("refillResult").textContent = JSON.stringify(data, null, 2); setMessage(messageId, resultMessage, true); showToast(resultMessage); }
-  catch (error) { setMessage(messageId, error.message); showToast(error.message, true); } finally { button.disabled = false; }
+  activeCategory = "All";
+
+  document
+    .querySelectorAll(".media-btn")
+    .forEach(button => {
+      button.classList.toggle(
+        "active",
+        button.dataset.platform ===
+        activePlatform
+      );
+    });
+
+  const label =
+    $("selectedPlatformLabel");
+
+  if (label) {
+    label.textContent =
+      getPlatformName(
+        activePlatform
+      ).toUpperCase();
+  }
+
+  renderCategories();
+  renderServices();
+  renderServiceSelect();
 }
 
-$("refillForm").addEventListener("submit", (event) => { event.preventDefault(); submitRefill("refillForm", "refillMessage", "Refill created.", "/booster-api/refill", () => ({ order: $("refillOrder").value.trim() })); });
-$("refillMultiForm").addEventListener("submit", (event) => { event.preventDefault(); submitRefill("refillMultiForm", "refillMultiMessage", "Multiple refills processed.", "/booster-api/refill-multiple", () => ({ orders: $("refillOrders").value.trim() })); });
-$("refillStatusForm").addEventListener("submit", (event) => { event.preventDefault(); submitRefill("refillStatusForm", "refillStatusMessage", "Refill status updated.", "/booster-api/refill-status", () => ({ refills: $("refillIds").value.trim() })); });
+function setupMediaButtons() {
+  document
+    .querySelectorAll(".media-btn")
+    .forEach(button => {
+      button.addEventListener(
+        "click",
+        () => {
+          setPlatform(
+            button.dataset.platform
+          );
+        }
+      );
+    });
+}
 
-loadBalance();
-loadServices();
+function setupChargeEvents() {
+  if (serviceSelect) {
+    serviceSelect.addEventListener(
+      "change",
+      () => {
+        updateServicePreview();
+        updateCharge();
+      }
+    );
+  }
+
+  if (quantityInput) {
+    quantityInput.addEventListener(
+      "input",
+      updateCharge
+    );
+
+    quantityInput.addEventListener(
+      "change",
+      updateCharge
+    );
+  }
+}
+
+function validateQuantity(service, quantity) {
+  if (!service) {
+    return "Please select a service.";
+  }
+
+  if (
+    !Number.isInteger(quantity) ||
+    quantity <= 0
+  ) {
+    return "Please enter a valid quantity.";
+  }
+
+  const min =
+    Number(
+      String(service.min ?? "")
+        .replace(/,/g, "")
+    );
+
+  const max =
+    Number(
+      String(service.max ?? "")
+        .replace(/,/g, "")
+    );
+
+  if (
+    Number.isFinite(min) &&
+    quantity < min
+  ) {
+    return `Minimum quantity is ${min}.`;
+  }
+
+  if (
+    Number.isFinite(max) &&
+    quantity > max
+  ) {
+    return `Maximum quantity is ${max}.`;
+  }
+
+  return null;
+}
+
+async function submitOrder(event) {
+  event.preventDefault();
+
+  const button =
+    event.submitter;
+
+  const service =
+    getSelectedService();
+
+  const link =
+    linkInput.value.trim();
+
+  const quantity =
+    Number(quantityInput.value);
+
+  const quantityError =
+    validateQuantity(
+      service,
+      quantity
+    );
+
+  if (quantityError) {
+    setMessage(
+      "orderMessage",
+      quantityError,
+      "bad"
+    );
+
+    showToast(
+      quantityError,
+      "bad"
+    );
+
+    return;
+  }
+
+  if (!link) {
+    setMessage(
+      "orderMessage",
+      "Please enter a link.",
+      "bad"
+    );
+
+    return;
+  }
+
+  try {
+    if (button) {
+      button.disabled = true;
+    }
+
+    setMessage(
+      "orderMessage",
+      "Placing order..."
+    );
+
+    const data =
+      await api("/api/order", {
+        method: "POST",
+        body: JSON.stringify({
+          service: service.service,
+          link,
+          quantity
+        })
+      });
+
+    const orderId =
+      data.order ??
+      data.order_id ??
+      data.id;
+
+    if (orderId !== undefined) {
+      setMessage(
+        "orderMessage",
+        `Order #${orderId} created successfully.`,
+        "good"
+      );
+
+      showToast(
+        `Order #${orderId} created successfully`,
+        "good"
+      );
+    } else {
+      setMessage(
+        "orderMessage",
+        "Order created successfully.",
+        "good"
+      );
+
+      showToast(
+        "Order created successfully",
+        "good"
+      );
+    }
+
+    $("orderForm").reset();
+
+    updateServicePreview();
+    updateCharge();
+
+    await loadBalance();
+
+  } catch (error) {
+    console.error(error);
+
+    setMessage(
+      "orderMessage",
+      error.message ||
+      "Failed to place order.",
+      "bad"
+    );
+
+    showToast(
+      error.message ||
+      "Failed to place order",
+      "bad"
+    );
+
+  } finally {
+    if (button) {
+      button.disabled = false;
+    }
+  }
+}
+
+function renderStatusCard(id, data) {
+  const card =
+    document.createElement("div");
+
+  card.className =
+    "result-card";
+
+  if (data.error) {
+    card.innerHTML = `
+      <div class="result-id">
+        ORDER #${escapeHtml(id)}
+      </div>
+
+      <div class="result-row">
+        <span>Error</span>
+        <b class="danger-text">
+          ${escapeHtml(data.error)}
+        </b>
+      </div>
+    `;
+
+    return card;
+  }
+
+  card.innerHTML = `
+    <div class="result-id">
+      ORDER #${escapeHtml(id)}
+    </div>
+
+    <div class="result-row">
+      <span>Status</span>
+      <b>${escapeHtml(data.status || "—")}</b>
+    </div>
+
+    <div class="result-row">
+      <span>Charge</span>
+      <b>
+        ${escapeHtml(data.charge || "—")}
+        ${escapeHtml(data.currency || "")}
+      </b>
+    </div>
+
+    <div class="result-row">
+      <span>Start Count</span>
+      <b>${escapeHtml(data.start_count ?? "—")}</b>
+    </div>
+
+    <div class="result-row">
+      <span>Remains</span>
+      <b>${escapeHtml(data.remains ?? "—")}</b>
+    </div>
+  `;
+
+  return card;
+}
+
+async function submitStatus(event) {
+  event.preventDefault();
+
+  const input =
+    $("ordersInput");
+
+  const container =
+    $("statusResults");
+
+  const ids =
+    input.value
+      .split(",")
+      .map(id => id.trim())
+      .filter(Boolean);
+
+  if (!ids.length) {
+    showToast(
+      "Enter at least one order ID",
+      "bad"
+    );
+
+    return;
+  }
+
+  if (ids.length > 100) {
+    showToast(
+      "Maximum of 100 order IDs allowed",
+      "bad"
+    );
+
+    return;
+  }
+
+  container.innerHTML =
+    `<div class="checking">Checking...</div>`;
+
+  try {
+    const data =
+      await api("/api/status", {
+        method: "POST",
+        body: JSON.stringify({
+          orders: ids.join(",")
+        })
+      });
+
+    container.innerHTML = "";
+
+    if (
+      data &&
+      typeof data === "object"
+    ) {
+      Object.entries(data).forEach(
+        ([id, status]) => {
+          container.appendChild(
+            renderStatusCard(
+              id,
+              status
+            )
+          );
+        }
+      );
+    }
+
+    if (!container.children.length) {
+      container.innerHTML =
+        `<div class="checking">No results.</div>`;
+    }
+
+  } catch (error) {
+    console.error(error);
+
+    container.innerHTML =
+      `<div class="danger-text">${escapeHtml(error.message)}</div>`;
+
+    showToast(
+      error.message ||
+      "Failed to check status",
+      "bad"
+    );
+  }
+}
+
+async function submitRefill(event) {
+  event.preventDefault();
+
+  const order =
+    $("refillOrder")
+      .value
+      .trim();
+
+  if (!order) {
+    setMessage(
+      "refillMessage",
+      "Enter an order ID.",
+      "bad"
+    );
+
+    return;
+  }
+
+  try {
+    setMessage(
+      "refillMessage",
+      "Creating refill..."
+    );
+
+    const data =
+      await api("/api/refill", {
+        method: "POST",
+        body: JSON.stringify({
+          order
+        })
+      });
+
+    const refill =
+      data.refill ??
+      data.refill_id ??
+      data.id;
+
+    setMessage(
+      "refillMessage",
+      refill !== undefined
+        ? `Refill #${refill} created.`
+        : "Refill created successfully.",
+      "good"
+    );
+
+    showToast(
+      refill !== undefined
+        ? `Refill #${refill} created`
+        : "Refill created",
+      "good"
+    );
+
+    $("refillOrder").value = "";
+
+  } catch (error) {
+    setMessage(
+      "refillMessage",
+      error.message ||
+      "Failed to create refill.",
+      "bad"
+    );
+
+    showToast(
+      error.message ||
+      "Failed to create refill",
+      "bad"
+    );
+  }
+}
+
+async function submitMultipleRefill(event) {
+  event.preventDefault();
+
+  const orders =
+    $("refillOrders")
+      .value
+      .split(",")
+      .map(id => id.trim())
+      .filter(Boolean);
+
+  if (!orders.length) {
+    setMessage(
+      "refillMultiMessage",
+      "Enter order IDs.",
+      "bad"
+    );
+
+    return;
+  }
+
+  if (orders.length > 100) {
+    setMessage(
+      "refillMultiMessage",
+      "Maximum of 100 order IDs.",
+      "bad"
+    );
+
+    return;
+  }
+
+  try {
+    setMessage(
+      "refillMultiMessage",
+      "Creating refills..."
+    );
+
+    const data =
+      await api("/api/refill-multiple", {
+        method: "POST",
+        body: JSON.stringify({
+          orders: orders.join(",")
+        })
+      });
+
+    $("refillResult").textContent =
+      JSON.stringify(
+        data,
+        null,
+        2
+      );
+
+    setMessage(
+      "refillMultiMessage",
+      "Multiple refills created.",
+      "good"
+    );
+
+    showToast(
+      "Multiple refills created",
+      "good"
+    );
+
+  } catch (error) {
+    setMessage(
+      "refillMultiMessage",
+      error.message ||
+      "Failed to create refills.",
+      "bad"
+    );
+
+    showToast(
+      error.message ||
+      "Failed to create refills",
+      "bad"
+    );
+  }
+}
+
+async function submitRefillStatus(event) {
+  event.preventDefault();
+
+  const refills =
+    $("refillIds")
+      .value
+      .split(",")
+      .map(id => id.trim())
+      .filter(Boolean);
+
+  if (!refills.length) {
+    setMessage(
+      "refillStatusMessage",
+      "Enter refill IDs.",
+      "bad"
+    );
+
+    return;
+  }
+
+  if (refills.length > 100) {
+    setMessage(
+      "refillStatusMessage",
+      "Maximum of 100 refill IDs.",
+      "bad"
+    );
+
+    return;
+  }
+
+  try {
+    setMessage(
+      "refillStatusMessage",
+      "Checking refill status..."
+    );
+
+    const data =
+      await api("/api/refill-status", {
+        method: "POST",
+        body: JSON.stringify({
+          refills: refills.join(",")
+        })
+      });
+
+    $("refillResult").textContent =
+      JSON.stringify(
+        data,
+        null,
+        2
+      );
+
+    setMessage(
+      "refillStatusMessage",
+      "Status loaded.",
+      "good"
+    );
+
+  } catch (error) {
+    setMessage(
+      "refillStatusMessage",
+      error.message ||
+      "Failed to check refill status.",
+      "bad"
+    );
+
+    showToast(
+      error.message ||
+      "Failed to check refill status",
+      "bad"
+    );
+  }
+}
+
+function setupForms() {
+  const orderForm =
+    $("orderForm");
+
+  const statusForm =
+    $("statusForm");
+
+  const refillForm =
+    $("refillForm");
+
+  const refillMultiForm =
+    $("refillMultiForm");
+
+  const refillStatusForm =
+    $("refillStatusForm");
+
+  if (orderForm) {
+    orderForm.addEventListener(
+      "submit",
+      submitOrder
+    );
+  }
+
+  if (statusForm) {
+    statusForm.addEventListener(
+      "submit",
+      submitStatus
+    );
+  }
+
+  if (refillForm) {
+    refillForm.addEventListener(
+      "submit",
+      submitRefill
+    );
+  }
+
+  if (refillMultiForm) {
+    refillMultiForm.addEventListener(
+      "submit",
+      submitMultipleRefill
+    );
+  }
+
+  if (refillStatusForm) {
+    refillStatusForm.addEventListener(
+      "submit",
+      submitRefillStatus
+    );
+  }
+}
+
+function setupSearch() {
+  const search =
+    $("serviceSearch");
+
+  if (!search) return;
+
+  search.addEventListener(
+    "input",
+    () => {
+      renderServices();
+      renderServiceSelect();
+    }
+  );
+}
+
+function setupRefresh() {
+  const button =
+    $("refreshBtn");
+
+  if (!button) return;
+
+  button.addEventListener(
+    "click",
+    refreshAll
+  );
+}
+
+function setupLogin() {
+  const loginForm =
+    $("loginForm");
+
+  if (loginForm) {
+    loginForm.addEventListener(
+      "submit",
+      login
+    );
+  }
+
+  const toggle =
+    $("togglePassword");
+
+  if (toggle) {
+    toggle.addEventListener(
+      "click",
+      () => {
+        const input =
+          $("loginPassword");
+
+        input.type =
+          input.type === "password"
+            ? "text"
+            : "password";
+      }
+    );
+  }
+
+  const logoutButton =
+    $("logoutBtn");
+
+  if (logoutButton) {
+    logoutButton.addEventListener(
+      "click",
+      logout
+    );
+  }
+}
+
+async function startApp() {
+  setupTabs();
+  setupChargeEvents();
+  setupForms();
+  setupSearch();
+  setupRefresh();
+  setupMediaButtons();
+
+  await Promise.all([
+    loadServices(),
+    loadBalance()
+  ]);
+}
+
+document.addEventListener(
+  "DOMContentLoaded",
+  async () => {
+    setupLogin();
+    await checkAuth();
+  }
+);

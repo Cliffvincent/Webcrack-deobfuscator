@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#02030b">
+  <meta name="color-scheme" content="dark">
+  <title>Xenon Booster</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+
+  <style>
+    #serviceSelect {
+      width: 100%;
+    }
+
+    #serviceSelect optgroup {
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    #serviceSelect option {
+      font-weight: 500;
+      padding: 8px;
+    }
+
+    .service-select-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .service-select-title span {
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      opacity: .65;
+    }
+
+    .service-select-title strong {
+      font-size: 12px;
+      opacity: .9;
+    }
+
+    .service-empty {
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      opacity: .7;
+      text-align: center;
+    }
+
+    .category-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .category-btn {
+      cursor: pointer;
+    }
+
+    .service-name {
+      max-width: 420px;
+      white-space: normal;
+      word-break: break-word;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+
+    <div class="login-logo-wrap">
+      <div class="login-glow"></div>
+      <img src="/xenon-booster.png" class="login-logo" alt="Xenon Booster">
+    </div>
+
+    <div class="login-kicker">SECURE ACCESS</div>
+
+    <h1>XENON <span>BOOSTER</span></h1>
+
+    <p>Authorized users only.</p>
+
+    <form id="loginForm">
+
+      <label for="loginUsername">Username</label>
+
+      <input
+        id="loginUsername"
+        autocomplete="username"
+        placeholder="Enter username"
+        required
+      >
+
+      <label for="loginPassword">Password</label>
+
+      <div class="password-wrap">
+
+        <input
+          id="loginPassword"
+          type="password"
+          autocomplete="current-password"
+          placeholder="Enter password"
+          required
+        >
+
+        <button id="togglePassword" type="button">◉</button>
+
+      </div>
+
+      <button class="primary-btn login-btn" type="submit">
+        <span>⚡</span>
+        <span>AUTHORIZE ACCESS</span>
+      </button>
+
+      <div id="loginMessage" class="form-message"></div>
+
+    </form>
+
+  </div>
+</div>
+
+<div id="appContent" class="app-content hidden">
+
+  <div class="background-effects" aria-hidden="true">
+    <div class="bg-grid"></div>
+    <div class="orb orb-one"></div>
+    <div class="orb orb-two"></div>
+    <div class="orb orb-three"></div>
+  </div>
+
+  <header class="topbar">
+
+    <div class="topbar-inner">
+
+      <a class="brand" href="#">
+
+        <img
+          src="/xenon-booster.png"
+          alt=""
+          class="brand-logo"
+        >
+
+        <div class="brand-copy">
+          <div class="brand-name">XENON</div>
+          <div class="brand-sub">BOOSTER</div>
+        </div>
+
+      </a>
+
+      <div class="top-actions">
+
+        <div class="balance-pill">
+          <span class="pulse"></span>
+          <span class="balance-label">Balance</span>
+          <strong id="topBalance">Loading...</strong>
+        </div>
+
+        <button
+          class="icon-btn"
+          id="refreshBtn"
+          type="button"
+          aria-label="Refresh"
+        >
+          ↻
+        </button>
+
+        <button
+          class="logout-btn"
+          id="logoutBtn"
+          type="button"
+        >
+          Logout
+        </button>
+
+      </div>
+
+    </div>
+
+  </header>
+
+  <main class="container">
+
+    <section class="hero">
+
+      <div class="hero-copy">
+
+        <div class="eyebrow">
+          <span></span>
+          NEXT GENERATION BOOSTING PANEL
+        </div>
+
+        <h1>
+          POWER YOUR<br>
+          <em>SOCIAL GROWTH</em>
+        </h1>
+
+        <p>
+          Fast, clean and powerful ordering with live service data from Xenon Booster.
+        </p>
+
+        <div class="hero-stats">
+
+          <div>
+            <strong id="serviceCount">0</strong>
+            <span>Services</span>
+          </div>
+
+          <div>
+            <strong>24/7</strong>
+            <span>Automation</span>
+          </div>
+
+          <div>
+            <strong>API</strong>
+            <span>Connected</span>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="hero-logo-wrap">
+        <div class="logo-halo"></div>
+
+        <img
+          src="/xenon-booster.png"
+          alt="Xenon Booster"
+          class="hero-logo-image"
+        >
+      </div>
+
+    </section>
+
+    <nav class="tabs">
+
+      <button
+        class="tab active"
+        data-tab="order"
+        type="button"
+      >
+        New Order
+      </button>
+
+      <button
+        class="tab"
+        data-tab="orders"
+        type="button"
+      >
+        Order Status
+      </button>
+
+      <button
+        class="tab"
+        data-tab="refills"
+        type="button"
+      >
+        Refills
+      </button>
+
+      <button
+        class="tab"
+        data-tab="services"
+        type="button"
+      >
+        Services
+      </button>
+
+    </nav>
+
+    <section
+      class="panel tab-panel active"
+      id="orderPanel"
+    >
+
+      <div class="section-head">
+
+        <div>
+          <div class="section-kicker">CREATE ORDER</div>
+          <h2>Launch a new boost</h2>
+        </div>
+
+        <div class="status-dot">
+          <span></span>
+          API ONLINE
+        </div>
+
+      </div>
+
+      <div class="media-title">
+        <span>SELECT PLATFORM</span>
+      </div>
+
+      <div
+        class="media-grid"
+        id="mediaGrid"
+      >
+
+        <button
+          class="media-btn active"
+          data-platform="all"
+          type="button"
+        >
+          <span class="media-icon">✦</span>
+          <span>All</span>
+        </button>
+
+        <button
+          class="media-btn"
+          data-platform="facebook"
+          type="button"
+        >
+          <span class="media-icon facebook">f</span>
+          <span>Facebook</span>
+        </button>
+
+        <button
+          class="media-btn"
+          data-platform="youtube"
+          type="button"
+        >
+          <span class="media-icon youtube">▶</span>
+          <span>YouTube</span>
+        </button>
+
+        <button
+          class="media-btn"
+          data-platform="instagram"
+          type="button"
+        >
+          <span class="media-icon instagram">◎</span>
+          <span>Instagram</span>
+        </button>
+
+        <button
+          class="media-btn"
+          data-platform="tiktok"
+          type="button"
+        >
+          <span class="media-icon tiktok">♪</span>
+          <span>TikTok</span>
+        </button>
+
+        <button
+          class="media-btn"
+          data-platform="telegram"
+          type="button"
+        >
+          <span class="media-icon telegram">➤</span>
+          <span>Telegram</span>
+        </button>
+
+        <button
+          class="media-btn"
+          data-platform="twitter"
+          type="button"
+        >
+          <span class="media-icon twitter">𝕏</span>
+          <span>X</span>
+        </button>
+
+      </div>
+
+      <div class="order-layout">
+
+        <form
+          id="orderForm"
+          class="form-card"
+        >
+
+          <div class="service-select-title">
+            <span>Available Services</span>
+            <strong id="selectedPlatformLabel">ALL</strong>
+          </div>
+
+          <label for="serviceSelect">
+            Service
+          </label>
+
+          <div class="select-wrap">
+
+            <select
+              id="serviceSelect"
+              required
+            >
+              <option value="">
+                Loading services...
+              </option>
+            </select>
+
+          </div>
+
+          <div
+            class="service-preview"
+            id="servicePreview"
+          >
+
+            <div class="preview-main">
+
+              <span class="preview-icon">✦</span>
+
+              <div>
+
+                <strong id="previewName">
+                  Select a service
+                </strong>
+
+                <span id="previewCategory">
+                  Choose from the available services
+                </span>
+
+              </div>
+
+            </div>
+
+            <div class="preview-meta">
+
+              <span>
+                Rate
+                <b id="previewRate">—</b>
+              </span>
+
+              <span>
+                Min
+                <b id="previewMin">—</b>
+              </span>
+
+              <span>
+                Max
+                <b id="previewMax">—</b>
+              </span>
+
+            </div>
+
+          </div>
+
+          <label for="linkInput">
+            Link
+          </label>
+
+          <input
+            id="linkInput"
+            type="url"
+            placeholder="https://..."
+            required
+          >
+
+          <label for="quantityInput">
+            Quantity
+          </label>
+
+          <input
+            id="quantityInput"
+            type="number"
+            min="1"
+            placeholder="Enter quantity"
+            required
+          >
+
+          <div class="charge-box">
+
+            <span>
+              Estimated charge
+            </span>
+
+            <strong id="charge">
+              0.00000 USD
+            </strong>
+
+          </div>
+
+          <button
+            class="primary-btn"
+            type="submit"
+          >
+            <span>⚡</span>
+            <span>PLACE ORDER</span>
+          </button>
+
+          <div
+            class="form-message"
+            id="orderMessage"
+          ></div>
+
+        </form>
+
+        <aside class="side-card">
+
+          <div class="side-glow"></div>
+
+          <img
+            src="/xenon-booster.png"
+            alt=""
+            class="side-logo"
+          >
+
+          <h3>
+            Built for speed
+          </h3>
+
+          <p>
+            Your provider API key stays on the Node.js server.
+            Only authenticated users can access the protected API routes.
+          </p>
+
+          <div class="feature-list">
+
+            <div>
+              <span>✓</span>
+              Live service catalog
+            </div>
+
+            <div>
+              <span>✓</span>
+              Instant order creation
+            </div>
+
+            <div>
+              <span>✓</span>
+              Single & bulk status
+            </div>
+
+            <div>
+              <span>✓</span>
+              Refill management
+            </div>
+
+            <div>
+              <span>✓</span>
+              Protected admin access
+            </div>
+
+          </div>
+
+        </aside>
+
+      </div>
+
+    </section>
+
+    <section
+      class="panel tab-panel"
+      id="ordersPanel"
+    >
+
+      <div class="section-head">
+
+        <div>
+          <div class="section-kicker">
+            TRACK ORDERS
+          </div>
+
+          <h2>
+            Order status
+          </h2>
+        </div>
+
+      </div>
+
+      <form
+        id="statusForm"
+        class="inline-form"
+      >
+
+        <input
+          id="ordersInput"
+          placeholder="Order IDs, e.g. 23501,23502,23503"
+          required
+        >
+
+        <button
+          class="primary-btn compact"
+          type="submit"
+        >
+          CHECK STATUS
+        </button>
+
+      </form>
+
+      <div
+        class="result-grid"
+        id="statusResults"
+      ></div>
+
+    </section>
+
+    <section
+      class="panel tab-panel"
+      id="refillsPanel"
+    >
+
+      <div class="section-head">
+
+        <div>
+          <div class="section-kicker">
+            REFILL CENTER
+          </div>
+
+          <h2>
+            Manage refills
+          </h2>
+        </div>
+
+      </div>
+
+      <div class="tool-grid">
+
+        <form
+          class="mini-card"
+          id="refillForm"
+        >
+
+          <h3>
+            Create refill
+          </h3>
+
+          <p>
+            Request a refill for one order.
+          </p>
+
+          <input
+            id="refillOrder"
+            placeholder="Order ID"
+            required
+          >
+
+          <button
+            class="primary-btn compact"
+            type="submit"
+          >
+            CREATE REFILL
+          </button>
+
+          <div
+            class="form-message"
+            id="refillMessage"
+          ></div>
+
+        </form>
+
+        <form
+          class="mini-card"
+          id="refillMultiForm"
+        >
+
+          <h3>
+            Multiple refills
+          </h3>
+
+          <p>
+            Up to 100 order IDs separated by commas.
+          </p>
+
+          <input
+            id="refillOrders"
+            placeholder="23501,23502,23503"
+            required
+          >
+
+          <button
+            class="primary-btn compact"
+            type="submit"
+          >
+            CREATE MULTIPLE
+          </button>
+
+          <div
+            class="form-message"
+            id="refillMultiMessage"
+          ></div>
+
+        </form>
+
+        <form
+          class="mini-card"
+          id="refillStatusForm"
+        >
+
+          <h3>
+            Refill status
+          </h3>
+
+          <p>
+            Check one or multiple refill IDs.
+          </p>
+
+          <input
+            id="refillIds"
+            placeholder="1 or 1,2,3"
+            required
+          >
+
+          <button
+            class="primary-btn compact"
+            type="submit"
+          >
+            CHECK STATUS
+          </button>
+
+          <div
+            class="form-message"
+            id="refillStatusMessage"
+          ></div>
+
+        </form>
+
+      </div>
+
+      <pre
+        class="json-box"
+        id="refillResult"
+      >Results will appear here.</pre>
+
+    </section>
+
+    <section
+      class="panel tab-panel"
+      id="servicesPanel"
+    >
+
+      <div class="section-head services-head">
+
+        <div>
+          <div class="section-kicker">
+            LIVE CATALOG
+          </div>
+
+          <h2>
+            All services
+          </h2>
+        </div>
+
+        <input
+          class="search"
+          id="serviceSearch"
+          placeholder="Search services..."
+        >
+
+      </div>
+
+      <div
+        class="media-grid services-media-grid"
+        id="servicesMediaGrid"
+      >
+
+        <button
+          class="media-btn active"
+          data-platform="all"
+          type="button"
+        >
+          <span class="media-icon">✦</span>
+          <span>All</span>
+        </button>
+
+        <button
+          class="media-btn"
+          data-platform="facebook"
+          type="button"
+        >
+          <span class="media-icon facebook">f</span>
+          <span>Facebook</span>
+        </button>
+
+        <button
+          class="media-btn"
+          data-platform="youtube"
+          type="button"
+        >
+          <span class="media-icon youtube">▶</span>
+          <span>YouTube</span>
+        </button>
+
+        <button
+          class="media-btn"
+          data-platform="instagram"
+          type="button"
+        >
+          <span class="media-icon instagram">◎</span>
+          <span>Instagram</span>
+        </button>
+
+        <button
+          class="media-btn"
+          data-platform="tiktok"
+          type="button"
+        >
+          <span class="media-icon tiktok">♪</span>
+          <span>TikTok</span>
+        </button>
+
+        <button
+          class="media-btn"
+          data-platform="telegram"
+          type="button"
+        >
+          <span class="media-icon telegram">➤</span>
+          <span>Telegram</span>
+        </button>
+
+        <button
+          class="media-btn"
+          data-platform="twitter"
+          type="button"
+        >
+          <span class="media-icon twitter">𝕏</span>
+          <span>X</span>
+        </button>
+
+      </div>
+
+      <div
+        class="category-row"
+        id="categoryRow"
+      ></div>
+
+      <div class="service-table-wrap">
+
+        <table>
+
+          <thead>
+
+            <tr>
+              <th>ID</th>
+              <th>Service</th>
+              <th>Type</th>
+              <th>Category</th>
+              <th>Rate / 1K</th>
+              <th>Min</th>
+              <th>Max</th>
+              <th>Refill</th>
+              <th>Cancel</th>
+            </tr>
+
+          </thead>
+
+          <tbody id="servicesBody"></tbody>
+
+        </table>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <div
+    class="toast"
+    id="toast"
+  ></div>
+
+  <footer>
+
+    <span class="footer-logo">
+      XENON BOOSTER
+    </span>
+
+    <span class="footer-dot">
+      •
+    </span>
+
+    <span>
+      © 2026 ALL RIGHTS RESERVED
+    </span>
+
+  </footer>
+
+</div>
+
+<script src="/app.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const select = document.getElementById("serviceSelect");
+  const label = document.getElementById("selectedPlatformLabel");
+  const buttons = document.querySelectorAll("#mediaGrid .media-btn");
+
+  buttons.forEach(button => {
+    button.addEventListener("click", () => {
+      const platform = button.dataset.platform || "all";
+
+      if (label) {
+        label.textContent =
+          platform === "all"
+            ? "ALL"
+            : platform.toUpperCase();
+      }
+    });
+  });
+
+  if (select) {
+    select.addEventListener("change", () => {
+      const selected =
+        select.options[select.selectedIndex];
+
+      if (
+        selected &&
+        selected.parentElement &&
+        selected.parentElement.tagName === "OPTGROUP"
+      ) {
+        const group =
+          selected.parentElement.label || "";
+
+        if (label && group) {
+          label.textContent =
+            group.toUpperCase();
+        }
+      }
+    });
+  }
+});
+</script>
+
+</body>
+</html>
