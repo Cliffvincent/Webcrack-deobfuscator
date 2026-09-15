@@ -2,12 +2,11 @@ const express = require("express");
 const axios = require("axios");
 const crypto = require("crypto"); 
 const path = require("path");
-require("dotenv").config();
 const { webcrack } = require("webcrack");
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
-const PORT = Number(process.env.PORT || 3000);
+const PORT = 3000;
 
 
 
@@ -398,9 +397,7 @@ app.get("/xenon-booster.png", (req, res) => {
   res.sendFile(
     path.join(__dirname, "public", "xenon-booster.png")
   );
-});
-
-app.use(express.static(path.join(__dirname, "public")));
+}); **/
 
 app.get("/", (req, res) => {
   res.sendFile(
