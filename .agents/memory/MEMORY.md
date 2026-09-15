@@ -1,1 +1,0 @@
-- [Root artifact routing](artifact-routing.md) — root web apps must avoid `/api/*` when the shared API service is mounted there.
