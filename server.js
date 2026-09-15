@@ -397,7 +397,7 @@ app.get("/xenon-booster.png", (req, res) => {
   res.sendFile(
     path.join(__dirname, "public", "xenon-booster.png")
   );
-}); **/
+});
 
 app.get("/", (req, res) => {
   res.sendFile(
