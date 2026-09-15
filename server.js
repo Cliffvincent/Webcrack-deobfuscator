@@ -1,13 +1,11 @@
 const express = require("express");
-const axios = require("axios");
-const crypto = require("crypto");
+/** const axios = require("axios");
+const crypto = require("crypto"); */
 const path = require("path");
 require("dotenv").config();
-const cors = require('cors');
 const { webcrack } = require("webcrack");
 
 const app = express();
-app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 const PORT = Number(process.env.PORT || 3000);
 
