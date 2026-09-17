@@ -2,7 +2,7 @@ const express = require("express");
 const axios = require("axios");
 const crypto = require("crypto"); 
 const path = require("path");
-const { webcrack } = require("webcrack");
+/** const { webcrack } = require("webcrack"); */
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
@@ -15,7 +15,7 @@ const PORT = 3000;
 
 
 
- app.post('/api/deobfuscate', async (req, res) => {
+ /** app.post('/api/deobfuscate', async (req, res) => {
   try {
     const { code, options = {} } = req.body;
 
@@ -55,15 +55,15 @@ const PORT = 3000;
       error: error.message || 'Deobfuscation failed'
     });
   }
-}); 
+}); **/
 
 
 
 
 const API_URL = process.env.API_URL || "https://nikoxsmm.site/api/v2";
-const API_KEY = process.env.API_KEY;
-const ADMIN_USER = process.env.ADMIN_USER;
-const ADMIN_PASS = process.env.ADMIN_PASS;
+const API_KEY = "8083290977cb8c4566e9b886e0138e92";
+const ADMIN_USER = process.env.ADMIN_USER || "yazkyxyz";
+const ADMIN_PASS = process.env.ADMIN_PASS || "yazky123";
 
 const sessions = new Map();
 
