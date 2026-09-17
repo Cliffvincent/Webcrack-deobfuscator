@@ -1,0 +1,12 @@
+node_modules
+.git
+.cache
+.local
+.agents
+.conversation
+attached_assets
+screenshots
+Dockerfile
+*.log
+.env
+npm-debug.log

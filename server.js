@@ -11,7 +11,7 @@ app.use(express.static(path.join(__dirname, "public"), {
   maxAge: 0
 }));
 app.get("/favicon.ico", (_req, res) => res.status(204).end());
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 8080);
 
 
 
@@ -231,8 +231,6 @@ app.get("/api/auth", (req, res) => {
   });
 });
 
-app.use("/api", requireAuth);
-
 app.get("/api/health", (_req, res) => {
   res.json({
     ok: true,
@@ -240,6 +238,8 @@ app.get("/api/health", (_req, res) => {
     provider: API_URL
   });
 });
+
+app.use("/api", requireAuth);
 
 app.get("/api/services", async (_req, res) => {
   try {
