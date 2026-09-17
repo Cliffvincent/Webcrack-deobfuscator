@@ -1,0 +1,1 @@
+- [External npm builds](external-npm-builds.md) — Replit-generated lockfiles can contain internal package URLs that external Docker builders cannot reach.
