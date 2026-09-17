@@ -5,7 +5,12 @@ const path = require("path");
 const { webcrack } = require("webcrack");
 
 const app = express();
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.static(path.join(__dirname, "public"), {
+  etag: true,
+  maxAge: 0
+}));
+app.get("/favicon.ico", (_req, res) => res.status(204).end());
 const PORT = 3000;
 
 
@@ -56,9 +61,9 @@ const PORT = 3000;
 
 
 const API_URL = process.env.API_URL || "https://nikoxsmm.site/api/v2";
-const API_KEY = process.env.API_KEY || "8a6f67934244065033ec2f5ac269a99a";
-const ADMIN_USER = "yazkyxyz";
-const ADMIN_PASS = "yazky123";
+const API_KEY = process.env.API_KEY;
+const ADMIN_USER = process.env.ADMIN_USER;
+const ADMIN_PASS = process.env.ADMIN_PASS;
 
 const sessions = new Map();
 

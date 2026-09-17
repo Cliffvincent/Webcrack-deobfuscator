@@ -1,0 +1,450 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebCrack Deobfuscator</title>
+
+  <link id="hljs-theme"
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/styles/github-dark.min.css">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: Arial, sans-serif;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1100px;
+      margin: auto;
+    }
+
+    h1 {
+      margin: 0 0 20px;
+      font-size: 28px;
+    }
+
+    .panel {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .title {
+      font-weight: bold;
+    }
+
+    .theme {
+      font-size: 12px;
+      color: #94a3b8;
+      background: #0f172a;
+      padding: 6px 10px;
+      border-radius: 6px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 300px;
+      resize: vertical;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      background: #020617;
+      color: #e2e8f0;
+      padding: 14px;
+      outline: none;
+      font-family: monospace;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    textarea:focus {
+      border-color: #64748b;
+    }
+
+    .code-container {
+      position: relative;
+      width: 100%;
+      min-height: 350px;
+      overflow: auto;
+      border-radius: 8px;
+      border: 1px solid #334155;
+    }
+
+    .code-container pre {
+      margin: 0;
+      min-height: 350px;
+    }
+
+    .code-container code {
+      display: block;
+      min-height: 350px;
+      padding: 16px;
+      font-family: monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre;
+      tab-size: 2;
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+
+    .option {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 12px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .option input {
+      width: 17px;
+      height: 17px;
+      cursor: pointer;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 18px;
+      font-size: 14px;
+      cursor: pointer;
+      background: #2563eb;
+      color: white;
+    }
+
+    button:hover {
+      opacity: .9;
+    }
+
+    button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    #clear {
+      background: #475569;
+    }
+
+    #download {
+      background: #16a34a;
+      display: none;
+    }
+
+    #randomTheme {
+      background: #7c3aed;
+    }
+
+    .status {
+      margin-top: 12px;
+      min-height: 20px;
+      font-size: 14px;
+      color: #94a3b8;
+    }
+
+    .error {
+      color: #f87171;
+    }
+
+    .success {
+      color: #4ade80;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 12px;
+      }
+
+      h1 {
+        font-size: 23px;
+      }
+
+      textarea {
+        min-height: 250px;
+      }
+
+      .title-row {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <h1>WebCrack Deobfuscator</h1>
+
+    <div class="panel">
+      <div class="title-row">
+        <span class="title">JavaScript Input</span>
+      </div>
+
+      <textarea
+        id="input"
+        spellcheck="false"
+        placeholder="Paste your JavaScript code here..."
+      ></textarea>
+
+      <div class="buttons">
+        <button id="deobfuscate">Deobfuscate</button>
+        <button id="clear">Clear</button>
+      </div>
+
+      <div id="status" class="status"></div>
+    </div>
+
+    <div class="panel">
+      <div class="title-row">
+        <span class="title">Options</span>
+      </div>
+
+      <div class="options">
+
+        <label class="option">
+          <input type="checkbox" id="jsx" checked>
+          <span>JSX</span>
+        </label>
+
+        <label class="option">
+          <input type="checkbox" id="unpack" checked>
+          <span>Unpack</span>
+        </label>
+
+        <label class="option">
+          <input type="checkbox" id="unminify" checked>
+          <span>Unminify</span>
+        </label>
+
+        <label class="option">
+          <input type="checkbox" id="deobfuscateOption" checked>
+          <span>Deobfuscate</span>
+        </label>
+
+        <label class="option">
+          <input type="checkbox" id="mangle">
+          <span>Mangle</span>
+        </label>
+
+      </div>
+    </div>
+
+    <div class="panel">
+
+      <div class="title-row">
+        <span class="title">Output</span>
+        <span id="themeName" class="theme">github-dark</span>
+      </div>
+
+      <div class="code-container">
+        <pre><code id="output" class="language-javascript"></code></pre>
+      </div>
+
+      <div class="buttons">
+        <button id="randomTheme">Random Theme</button>
+        <button id="download">Download JS</button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    const themes = [
+      "monokai",
+      "github-dark-dimmed",
+      "github-dark",
+      "night-owl"
+    ];
+
+    const input = document.getElementById("input");
+    const output = document.getElementById("output");
+    const status = document.getElementById("status");
+    const themeName = document.getElementById("themeName");
+    const themeLink = document.getElementById("hljs-theme");
+
+    const deobfuscateButton = document.getElementById("deobfuscate");
+    const clearButton = document.getElementById("clear");
+    const downloadButton = document.getElementById("download");
+    const randomThemeButton = document.getElementById("randomTheme");
+
+    let outputCode = "";
+
+    function randomTheme() {
+      const theme =
+        themes[Math.floor(Math.random() * themes.length)];
+
+      themeLink.href =
+        `https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/styles/${theme}.min.css`;
+
+      themeName.textContent = theme;
+
+      if (outputCode) {
+        highlightOutput();
+      }
+    }
+
+    function highlightOutput() {
+      output.textContent = outputCode;
+
+      hljs.highlightElement(output);
+    }
+
+    deobfuscateButton.addEventListener("click", async () => {
+      const code = input.value.trim();
+
+      if (!code) {
+        status.textContent = "Please enter JavaScript code.";
+        status.className = "status error";
+        return;
+      }
+
+      deobfuscateButton.disabled = true;
+      downloadButton.style.display = "none";
+
+      outputCode = "";
+      output.textContent = "";
+
+      status.textContent = "Processing...";
+      status.className = "status";
+
+      randomTheme();
+
+      try {
+        const response = await fetch("/api/deobfuscate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            code,
+            options: {
+              jsx: document.getElementById("jsx").checked,
+              unpack: document.getElementById("unpack").checked,
+              unminify: document.getElementById("unminify").checked,
+              deobfuscate:
+                document.getElementById("deobfuscateOption").checked,
+              mangle:
+                document.getElementById("mangle").checked
+            }
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.status) {
+          throw new Error(
+            data.error || "Request failed"
+          );
+        }
+
+        outputCode = data.code || "";
+
+        highlightOutput();
+
+        status.textContent =
+          "Deobfuscation completed.";
+
+        status.className =
+          "status success";
+
+        downloadButton.style.display =
+          "inline-block";
+
+      } catch (error) {
+        outputCode = "";
+        output.textContent = "";
+
+        status.textContent =
+          error.message || "Something went wrong.";
+
+        status.className =
+          "status error";
+
+      } finally {
+        deobfuscateButton.disabled = false;
+      }
+    });
+
+    clearButton.addEventListener("click", () => {
+      input.value = "";
+      outputCode = "";
+      output.textContent = "";
+
+      status.textContent = "";
+
+      downloadButton.style.display =
+        "none";
+    });
+
+    randomThemeButton.addEventListener(
+      "click",
+      randomTheme
+    );
+
+    downloadButton.addEventListener("click", () => {
+      if (!outputCode) return;
+
+      const blob = new Blob(
+        [outputCode],
+        {
+          type: "application/javascript"
+        }
+      );
+
+      const url =
+        URL.createObjectURL(blob);
+
+      const a =
+        document.createElement("a");
+
+      a.href = url;
+      a.download = "deobfuscated.js";
+
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      URL.revokeObjectURL(url);
+    });
+
+    randomTheme();
+  </script>
+</body>
+</html>
