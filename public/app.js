@@ -115,6 +115,21 @@ async function loadServicesTable() {
   if (servicesTableLoaded || servicesTableLoading) return;
 
   servicesTableLoading = true;
+  const body = $("servicesBody");
+
+  if (body) {
+    body.innerHTML = `
+      <tr>
+        <td colspan="9">
+          <div class="services-loading">
+            <span class="loading-spinner"></span>
+            Loading services...
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
   setServicesPanelStatus("Loading services...", true);
 
   if (!services.length && !servicesLoading) {
