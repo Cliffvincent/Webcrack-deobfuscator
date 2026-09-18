@@ -388,7 +388,7 @@
 
       </div>
 
-      <div class="order-service-browser">
+      <div class="order-service-browser order-search-browser">
 
         <div class="order-browser-head">
           <div>
@@ -408,12 +408,15 @@
           </label>
         </div>
 
+      </div>
+
+      <div class="order-service-browser order-category-browser">
+        <div class="media-title">SELECT CATEGORY</div>
         <div
           class="category-row order-category-row"
           id="orderCategoryRow"
           aria-label="Service categories"
         ></div>
-
       </div>
 
       <div class="order-layout">
@@ -489,7 +492,7 @@
 
           </div>
 
-          <div class="service-description-card">
+          <div class="service-description-card hidden" id="serviceDescriptionCard">
             <span class="preview-description-label">DESCRIPTION</span>
             <p id="previewDescription">Select a service to view its description.</p>
           </div>

@@ -283,6 +283,7 @@ function updateServicePreview() {
   const name = $("previewName");
   const category = $("previewCategory");
   const description = $("previewDescription");
+  const descriptionCard = $("serviceDescriptionCard");
   const rate = $("previewRate");
   const min = $("previewMin");
   const max = $("previewMax");
@@ -291,8 +292,8 @@ function updateServicePreview() {
     name.textContent = "Select a service";
     category.textContent =
       "Choose from the available services";
-    description.textContent =
-      "Select a service to view its description.";
+    description.textContent = "";
+    descriptionCard.classList.add("hidden");
     rate.textContent = "—";
     min.textContent = "—";
     max.textContent = "—";
@@ -310,9 +311,14 @@ function updateServicePreview() {
   category.textContent =
     getServiceCategory(service);
 
-  description.textContent =
-    cleanServiceDescription(service.desc) ||
-    "No description available for this service.";
+  const serviceDescription =
+    cleanServiceDescription(service.desc);
+
+  description.textContent = serviceDescription;
+  descriptionCard.classList.toggle(
+    "hidden",
+    !serviceDescription
+  );
 
   const numericRate = Number(
     String(service.rate ?? "")
