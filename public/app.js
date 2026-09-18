@@ -74,7 +74,12 @@ function setServicesLoading(loading) {
 
 function setServicesPanelStatus(message, loading = false, error = false) {
   const status = $("servicesPanelStatus");
+  const card = $("servicesCatalogCard");
   if (!status) return;
+
+  if (card) {
+    card.classList.toggle("hidden", !loading && !error);
+  }
 
   status.className = `services-loading${error ? " services-loading-error" : ""}`;
   status.innerHTML = `
@@ -119,9 +124,7 @@ async function loadServicesTable() {
   window.setTimeout(() => {
     renderServices();
     setServicesPanelStatus(
-      services.length
-        ? `${services.length} services are ready in New Order.`
-        : "No services are available right now.",
+      services.length ? "" : "No services are available right now.",
       false,
       !services.length
     );
