@@ -4,6 +4,9 @@ let services = [];
 let activeCategory = "All";
 let activePlatform = "all";
 let activeOrderCategory = "All";
+let serviceSearchTimer = null;
+let orderSearchTimer = null;
+let servicesLoading = false;
 
 const serviceSelect = $("serviceSelect");
 const quantityInput = $("quantityInput");
@@ -30,6 +33,55 @@ function setMessage(id, message, type = "") {
 
   el.textContent = message;
   el.className = `form-message ${type}`;
+}
+
+function setServicesLoading(loading) {
+  servicesLoading = loading;
+
+  const serviceSearch = $("serviceSearch");
+  const orderSearch = $("orderServiceSearch");
+  const body = $("servicesBody");
+  const select = $("serviceSelect");
+
+  [serviceSearch, orderSearch].forEach(input => {
+    if (input) input.disabled = loading;
+  });
+
+  if (loading) {
+    if (body) {
+      body.innerHTML = `
+        <tr>
+          <td colspan="9">
+            <div class="services-loading">
+              <span class="loading-spinner"></span>
+              Loading live services...
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    if (select) {
+      select.innerHTML =
+        `<option value="">Loading services...</option>`;
+    }
+  }
+}
+
+function showServicesFilterLoading() {
+  const body = $("servicesBody");
+  if (!body || servicesLoading) return;
+
+  body.innerHTML = `
+    <tr>
+      <td colspan="9">
+        <div class="services-loading">
+          <span class="loading-spinner"></span>
+          Filtering services...
+        </div>
+      </td>
+    </tr>
+  `;
 }
 
 async function api(url, options = {}) {
@@ -820,6 +872,8 @@ function escapeHtml(value) {
 }
 
 async function loadServices() {
+  setServicesLoading(true);
+
   try {
     const data =
       await api("/api/services");
@@ -852,6 +906,19 @@ async function loadServices() {
   } catch (error) {
     console.error(error);
 
+    const body = $("servicesBody");
+    if (body) {
+      body.innerHTML = `
+        <tr>
+          <td colspan="9">
+            <div class="services-loading services-loading-error">
+              Unable to load services. Please refresh and try again.
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
     serviceSelect.innerHTML = `
       <option value="">
         Unable to load services
@@ -863,6 +930,8 @@ async function loadServices() {
       "Failed to load services",
       "bad"
     );
+  } finally {
+    setServicesLoading(false);
   }
 }
 
@@ -1625,13 +1694,14 @@ function setupSearch() {
 
   if (!search) return;
 
-  search.addEventListener(
-    "input",
-    () => {
+  search.addEventListener("input", () => {
+    clearTimeout(serviceSearchTimer);
+    showServicesFilterLoading();
+
+    serviceSearchTimer = setTimeout(() => {
       renderServices();
-      renderServiceSelect();
-    }
-  );
+    }, 160);
+  });
 }
 
 function setupOrderSearch() {
@@ -1639,8 +1709,22 @@ function setupOrderSearch() {
   if (!search) return;
 
   search.addEventListener("input", () => {
-    renderServiceSelect();
-    renderOrderServiceResults();
+    clearTimeout(orderSearchTimer);
+
+    const container = $("orderServiceResults");
+    if (container && search.value.trim()) {
+      container.classList.remove("hidden");
+      container.innerHTML = `
+        <div class="service-search-empty">
+          <span class="loading-spinner"></span>
+          Searching services...
+        </div>
+      `;
+    }
+
+    orderSearchTimer = setTimeout(() => {
+      renderServiceSelect();
+    }, 160);
   });
 }
 

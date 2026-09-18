@@ -335,7 +335,13 @@
           data-platform="instagram"
           type="button"
         >
-          <span class="media-icon instagram">◎</span>
+          <span class="media-icon instagram" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img">
+              <rect x="4" y="4" width="16" height="16" rx="4" />
+              <circle cx="12" cy="12" r="3.7" />
+              <circle cx="17.3" cy="6.8" r="1" class="icon-dot" />
+            </svg>
+          </span>
           <span>Instagram</span>
         </button>
 
@@ -344,7 +350,11 @@
           data-platform="tiktok"
           type="button"
         >
-          <span class="media-icon tiktok">♪</span>
+          <span class="media-icon tiktok" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img">
+              <path d="M14.5 4.2v10.1a4.8 4.8 0 1 1-2.4-4.1v2.5a2.4 2.4 0 1 0 0 1.6V4.2h2.4c.4 1.9 1.6 3.3 3.5 3.9v2.3a6.8 6.8 0 0 1-3.5-1.5V4.2Z" />
+            </svg>
+          </span>
           <span>TikTok</span>
         </button>
 
@@ -856,7 +866,13 @@
           data-platform="instagram"
           type="button"
         >
-          <span class="media-icon instagram">◎</span>
+          <span class="media-icon instagram" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img">
+              <rect x="4" y="4" width="16" height="16" rx="4" />
+              <circle cx="12" cy="12" r="3.7" />
+              <circle cx="17.3" cy="6.8" r="1" class="icon-dot" />
+            </svg>
+          </span>
           <span>Instagram</span>
         </button>
 
@@ -865,7 +881,11 @@
           data-platform="tiktok"
           type="button"
         >
-          <span class="media-icon tiktok">♪</span>
+          <span class="media-icon tiktok" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img">
+              <path d="M14.5 4.2v10.1a4.8 4.8 0 1 1-2.4-4.1v2.5a2.4 2.4 0 1 0 0 1.6V4.2h2.4c.4 1.9 1.6 3.3 3.5 3.9v2.3a6.8 6.8 0 0 1-3.5-1.5V4.2Z" />
+            </svg>
+          </span>
           <span>TikTok</span>
         </button>
 
@@ -944,7 +964,16 @@
 
           </thead>
 
-          <tbody id="servicesBody"></tbody>
+          <tbody id="servicesBody">
+            <tr>
+              <td colspan="9">
+                <div class="services-loading">
+                  <span class="loading-spinner"></span>
+                  Loading live services...
+                </div>
+              </td>
+            </tr>
+          </tbody>
 
         </table>
 
