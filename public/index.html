@@ -814,6 +814,12 @@
           </h2>
         </div>
 
+        <input
+          class="search"
+          id="serviceSearch"
+          placeholder="Search services..."
+        >
+
       </div>
 
       <div
@@ -935,6 +941,41 @@
           <span class="loading-spinner"></span>
           Loading live services...
         </div>
+      </div>
+
+      <div class="service-table-wrap">
+
+        <table>
+
+          <thead>
+
+            <tr>
+              <th>ID</th>
+              <th>Service</th>
+              <th>Type</th>
+              <th>Category</th>
+              <th>Rate / 1K</th>
+              <th>Min</th>
+              <th>Max</th>
+              <th>Refill</th>
+              <th>Cancel</th>
+            </tr>
+
+          </thead>
+
+          <tbody id="servicesBody">
+            <tr>
+              <td colspan="9">
+                <div class="services-loading">
+                  <span class="loading-spinner"></span>
+                  Loading live services...
+                </div>
+              </td>
+            </tr>
+          </tbody>
+
+        </table>
+
       </div>
 
     </section>

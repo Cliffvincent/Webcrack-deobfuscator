@@ -117,6 +117,7 @@ async function loadServicesTable() {
   }
 
   window.setTimeout(() => {
+    renderServices();
     setServicesPanelStatus(
       services.length
         ? `${services.length} services are ready in New Order.`
@@ -1120,6 +1121,9 @@ function setPlatform(platform) {
 
   renderCategories();
   renderOrderCategories();
+  if (servicesTableLoaded) {
+    renderServices();
+  }
   renderServiceSelect();
 }
 
