@@ -282,6 +282,7 @@ function updateServicePreview() {
 
   const name = $("previewName");
   const category = $("previewCategory");
+  const description = $("previewDescription");
   const rate = $("previewRate");
   const min = $("previewMin");
   const max = $("previewMax");
@@ -290,6 +291,8 @@ function updateServicePreview() {
     name.textContent = "Select a service";
     category.textContent =
       "Choose from the available services";
+    description.textContent =
+      "Select a service to view its description.";
     rate.textContent = "—";
     min.textContent = "—";
     max.textContent = "—";
@@ -306,6 +309,10 @@ function updateServicePreview() {
 
   category.textContent =
     getServiceCategory(service);
+
+  description.textContent =
+    String(service.desc || "").trim() ||
+    "No description available for this service.";
 
   const numericRate = Number(
     String(service.rate ?? "")
@@ -399,6 +406,7 @@ function filteredServices() {
       service.type,
       service.category,
       getServiceCategory(service),
+      service.desc,
       service.rate,
       service.min,
       service.max
@@ -431,6 +439,7 @@ function filteredOrderServices() {
       service.type,
       service.category,
       getServiceCategory(service),
+      service.desc,
       service.rate
     ]
       .filter(value => value !== null && value !== undefined)
