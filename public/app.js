@@ -3,6 +3,7 @@ const $ = id => document.getElementById(id);
 let services = [];
 let activeCategory = "All";
 let activePlatform = "all";
+let activeOrderCategory = "All";
 
 const serviceSelect = $("serviceSelect");
 const quantityInput = $("quantityInput");
@@ -417,6 +418,29 @@ function filteredServices() {
   });
 }
 
+function filteredOrderServices() {
+  const search = $("orderServiceSearch");
+  const query = search ? search.value.trim().toLowerCase() : "";
+
+  return services.filter(service => {
+    const categoryMatch = serviceMatchesCategory(service, activeOrderCategory);
+    const platformMatch = serviceMatchesPlatform(service, activePlatform);
+    const text = [
+      service.service,
+      service.name,
+      service.type,
+      service.category,
+      getServiceCategory(service),
+      service.rate
+    ]
+      .filter(value => value !== null && value !== undefined)
+      .join(" ")
+      .toLowerCase();
+
+    return categoryMatch && platformMatch && text.includes(query);
+  });
+}
+
 function renderServiceSelect() {
   if (!serviceSelect) return;
 
@@ -437,7 +461,7 @@ function renderServiceSelect() {
 
   serviceSelect.appendChild(first);
 
-  const list = filteredServices();
+  const list = filteredOrderServices();
 
   if (!list.length) {
     const empty =
@@ -520,6 +544,42 @@ function renderServiceSelect() {
   }
 
   updateServicePreview();
+}
+
+function renderOrderCategories() {
+  const row = $("orderCategoryRow");
+  if (!row) return;
+
+  const categories = [
+    "All",
+    ...new Set(
+      services
+        .filter(service => serviceMatchesPlatform(service, activePlatform))
+        .map(service => getServiceCategory(service))
+    )
+  ];
+
+  if (!categories.includes(activeOrderCategory)) {
+    activeOrderCategory = "All";
+  }
+
+  row.innerHTML = "";
+
+  categories.forEach(category => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `category-btn ${category === activeOrderCategory ? "active" : ""}`;
+    button.textContent = category;
+    button.setAttribute("aria-pressed", category === activeOrderCategory ? "true" : "false");
+
+    button.addEventListener("click", () => {
+      activeOrderCategory = category;
+      renderOrderCategories();
+      renderServiceSelect();
+    });
+
+    row.appendChild(button);
+  });
 }
 
 function renderCategories() {
@@ -667,8 +727,10 @@ async function loadServices() {
       services.length;
 
     activeCategory = "All";
+    activeOrderCategory = "All";
 
     renderCategories();
+    renderOrderCategories();
     renderServices();
     renderServiceSelect();
 
@@ -793,6 +855,7 @@ function setPlatform(platform) {
     platform || "all";
 
   activeCategory = "All";
+  activeOrderCategory = "All";
 
   document
     .querySelectorAll(".media-btn")
@@ -815,6 +878,7 @@ function setPlatform(platform) {
   }
 
   renderCategories();
+  renderOrderCategories();
   renderServices();
   renderServiceSelect();
 }
@@ -1450,6 +1514,15 @@ function setupSearch() {
   );
 }
 
+function setupOrderSearch() {
+  const search = $("orderServiceSearch");
+  if (!search) return;
+
+  search.addEventListener("input", () => {
+    renderServiceSelect();
+  });
+}
+
 function setupRefresh() {
   const button =
     $("refreshBtn");
@@ -1507,6 +1580,7 @@ async function startApp() {
   setupChargeEvents();
   setupForms();
   setupSearch();
+  setupOrderSearch();
   setupRefresh();
   setupMediaButtons();
 

@@ -179,6 +179,14 @@ button,input,select{font:inherit}
 .tool-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.mini-card h3{margin:5px 0 2px;font-size:15px}.mini-card p{margin:0 0 14px;color:#7f8eb0;font-size:11px;line-height:1.6}
 .json-box{min-height:90px;margin:17px 0 0;padding:14px;overflow:auto;white-space:pre-wrap;border:1px solid rgba(91,123,255,.2);border-radius:11px;color:#b9caff;background:#050717;font:11px "DM Mono",monospace}
 .services-head{display:flex;align-items:flex-end;justify-content:space-between;gap:15px;margin-bottom:18px}.services-head h2{margin:5px 0 0;font:700 24px Orbitron,Inter,sans-serif}.services-head .search{max-width:270px;margin:0}
+ .order-service-browser{margin:20px 0 16px;padding:15px;border:1px solid rgba(91,123,255,.2);border-radius:14px;background:rgba(5,9,29,.42)}
+ .order-browser-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:13px}
+ .order-browser-copy{margin:6px 0 0;color:#7f8eb0;font-size:11px;line-height:1.5}
+ .order-search-wrap{position:relative;display:block;width:min(280px,100%);margin:0}
+ .order-search-wrap>span{position:absolute;z-index:1;left:13px;top:10px;color:var(--xb-blue);font-size:24px;line-height:24px;pointer-events:none}
+ .order-search-wrap .search{height:44px;margin:0;padding-left:38px}
+ .order-category-row{margin:0;max-height:92px;overflow:auto}
+ .order-category-row .category-btn{font-size:10px}
 .media-title{margin:2px 0 10px}.media-grid,.services-media-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}.media-btn{display:flex;align-items:center;gap:7px;padding:9px 11px;border:1px solid rgba(91,123,255,.22);border-radius:10px;color:#8b99bc;background:rgba(9,14,39,.76);font-size:11px;cursor:pointer;transition:transform .2s,border-color .2s,background .2s}.media-btn:hover,.media-btn.active{color:var(--xb-text);border-color:var(--xb-blue);background:rgba(33,91,169,.28)}.media-btn:active{transform:scale(.97)}
 .media-icon{display:grid;place-items:center;width:21px;height:21px;border-radius:6px;color:#a9c6ff;background:#275bca;font-weight:800}.media-icon.facebook{background:#315bb3}.media-icon.youtube{background:#d72d4a}.media-icon.instagram{background:linear-gradient(135deg,#f6b640,#e63184,#694cff)}.media-icon.tiktok{background:#182638}.media-icon.telegram{background:#238dcc}
 .service-table-wrap{width:100%;overflow-x:auto;border:1px solid rgba(91,123,255,.18);border-radius:11px}.service-table-wrap table{width:100%;min-width:870px;border-collapse:collapse}.service-table-wrap th{padding:12px;text-align:left;color:#7c8aad;background:rgba(19,28,70,.75);font:600 9px "DM Mono",monospace;letter-spacing:1px;text-transform:uppercase}.service-table-wrap td{padding:12px;border-top:1px solid rgba(255,255,255,.05);color:#bbc6e0;font-size:10px}.service-table-wrap td:first-child{color:var(--xb-blue);font-family:"DM Mono",monospace}.service-name{font-weight:700;color:var(--xb-text)}.badge{padding:4px 6px;border:1px solid rgba(101,246,187,.2);border-radius:99px;color:var(--xb-good);background:rgba(101,246,187,.06);font:600 9px "DM Mono",monospace}.badge.no{border-color:rgba(255,118,159,.2);color:var(--xb-danger);background:rgba(255,118,159,.06)}
@@ -201,6 +209,7 @@ button,input,select{font:inherit}
   .app-content .tabs{max-width:100%;padding-bottom:5px}.app-content .tab{padding:11px 14px}
   .app-content .panel{padding:16px;border-radius:15px;overflow:hidden;scroll-margin-top:82px}.section-head,.services-head{align-items:flex-start;flex-direction:column}
   .services-head .search{width:100%;max-width:none}.service-preview{align-items:flex-start;flex-direction:column}.preview-meta{justify-content:flex-start}.inline-form{flex-direction:column}.compact{width:100%}
-  .media-grid,.services-media-grid{max-width:100%;overflow:hidden}.media-btn{max-width:100%;white-space:nowrap}.service-table-wrap{max-width:100%}
+   .media-grid,.services-media-grid{max-width:100%;overflow:hidden}.media-btn{max-width:100%;white-space:nowrap}.service-table-wrap{max-width:100%}
+   .order-browser-head{align-items:flex-start;flex-direction:column}.order-search-wrap{width:100%}.order-service-browser{padding:13px}
   .toast{left:12px;right:12px;bottom:12px;max-width:none}
 }
