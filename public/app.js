@@ -240,6 +240,32 @@ function getServiceCategory(service) {
   );
 }
 
+function isPlatformCategory(category) {
+  const normalized = String(category || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+
+  return new Set([
+    "all",
+    "facebook",
+    "youtube",
+    "instagram",
+    "tiktok",
+    "telegram",
+    "twitter",
+    "x",
+    "x / twitter",
+    "spotify",
+    "discord",
+    "threads",
+    "linkedin",
+    "pinterest",
+    "reddit",
+    "other"
+  ]).has(normalized);
+}
+
 function getSelectedService() {
   return services.find(
     service =>
@@ -496,6 +522,7 @@ function renderServiceSelect() {
 
     serviceSelect.appendChild(empty);
 
+    renderOrderServiceResults();
     updateServicePreview();
     return;
   }
@@ -566,7 +593,71 @@ function renderServiceSelect() {
     serviceSelect.value = previous;
   }
 
+  renderOrderServiceResults();
   updateServicePreview();
+}
+
+function renderOrderServiceResults() {
+  const container = $("orderServiceResults");
+  const search = $("orderServiceSearch");
+  if (!container || !search) return;
+
+  const query = search.value.trim();
+  if (!query) {
+    container.classList.add("hidden");
+    container.innerHTML = "";
+    return;
+  }
+
+  const list = filteredOrderServices();
+  container.classList.remove("hidden");
+  container.innerHTML = "";
+
+  if (!list.length) {
+    container.innerHTML =
+      `<div class="service-search-empty">No matching services found.</div>`;
+    return;
+  }
+
+  list.forEach(service => {
+    const result = document.createElement("button");
+    const description = cleanServiceDescription(service.desc)
+      .replace(/\s+/g, " ")
+      .slice(0, 180);
+    const numericRate = Number(
+      String(service.rate ?? "").replace(/,/g, "")
+    );
+    const rateText = Number.isFinite(numericRate)
+      ? numericRate.toFixed(5)
+      : service.rate || "0";
+
+    result.type = "button";
+    result.className = "order-service-result";
+    result.innerHTML = `
+      <span class="service-result-id">#${escapeHtml(service.service)}</span>
+      <strong>${escapeHtml(service.name || "Service")}</strong>
+      ${
+        description
+          ? `<span class="service-result-description">${escapeHtml(description)}</span>`
+          : ""
+      }
+      <span class="service-result-meta">
+        ${escapeHtml(rateText)} / 1K · Min ${escapeHtml(service.min ?? "—")} · Max ${escapeHtml(service.max ?? "—")}
+      </span>
+    `;
+
+    result.addEventListener("click", () => {
+      serviceSelect.value = String(service.service);
+      updateServicePreview();
+      updateCharge();
+      serviceSelect.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    });
+
+    container.appendChild(result);
+  });
 }
 
 function renderOrderCategories() {
@@ -579,6 +670,7 @@ function renderOrderCategories() {
       services
         .filter(service => serviceMatchesPlatform(service, activePlatform))
         .map(service => getServiceCategory(service))
+        .filter(category => !isPlatformCategory(category))
     )
   ];
 
@@ -611,9 +703,13 @@ function renderCategories() {
     ...new Set(
       services.map(service =>
         getServiceCategory(service)
-      )
+      ).filter(category => !isPlatformCategory(category))
     )
   ];
+
+  if (!categories.includes(activeCategory)) {
+    activeCategory = "All";
+  }
 
   row.innerHTML = "";
 
@@ -1544,6 +1640,7 @@ function setupOrderSearch() {
 
   search.addEventListener("input", () => {
     renderServiceSelect();
+    renderOrderServiceResults();
   });
 }
 
