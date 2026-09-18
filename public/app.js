@@ -44,12 +44,25 @@ function setServicesLoading(loading) {
   const orderSearch = $("orderServiceSearch");
   const body = $("servicesBody");
   const select = $("serviceSelect");
+  const loadingState = $("servicesLoadingState");
+  const tableWrap = $("serviceTableWrap");
 
   [serviceSearch, orderSearch].forEach(input => {
     if (input) input.disabled = loading;
   });
 
   if (loading) {
+    if (loadingState) {
+      loadingState.classList.remove("hidden");
+      loadingState.classList.remove("services-loading-error");
+      loadingState.innerHTML = `
+        <span class="loading-spinner"></span>
+        Loading live services...
+      `;
+    }
+
+    if (tableWrap) tableWrap.classList.add("hidden");
+
     if (body) {
       body.innerHTML = `
         <tr>
@@ -62,8 +75,6 @@ function setServicesLoading(loading) {
         </tr>
       `;
     }
-
-    setServicesPanelStatus("Loading live services...", true);
 
     if (select) {
       select.innerHTML =
@@ -88,6 +99,24 @@ function setServicesPanelStatus(message, loading = false, error = false) {
   `;
 }
 
+function setServicesTableLoading(loading, message = "Loading services...", error = false) {
+  const loadingState = $("servicesLoadingState");
+  const tableWrap = $("serviceTableWrap");
+
+  if (loadingState) {
+    loadingState.classList.toggle("hidden", !loading);
+    loadingState.classList.toggle("services-loading-error", error);
+    loadingState.innerHTML = `
+      ${loading && !error ? '<span class="loading-spinner"></span>' : ""}
+      ${escapeHtml(message)}
+    `;
+  }
+
+  if (tableWrap) {
+    tableWrap.classList.toggle("hidden", loading || error);
+  }
+}
+
 function showServicesFilterLoading() {
   const body = $("servicesBody");
   if (!body || servicesLoading) return;
@@ -106,9 +135,6 @@ function showServicesFilterLoading() {
 
 function showServicesTablePlaceholder() {
   if (servicesTableLoaded || servicesLoading) return;
-  setServicesPanelStatus(
-    "Open the Services tab to load the service catalog."
-  );
 }
 
 async function loadServicesTable() {
@@ -117,20 +143,7 @@ async function loadServicesTable() {
   servicesTableLoading = true;
   const body = $("servicesBody");
 
-  if (body) {
-    body.innerHTML = `
-      <tr>
-        <td colspan="9">
-          <div class="services-loading">
-            <span class="loading-spinner"></span>
-            Loading services...
-          </div>
-        </td>
-      </tr>
-    `;
-  }
-
-  setServicesPanelStatus("Loading services...", true);
+  setServicesTableLoading(true);
 
   if (!services.length && !servicesLoading) {
     await loadServices();
@@ -138,9 +151,9 @@ async function loadServicesTable() {
 
   window.setTimeout(() => {
     renderServices();
-    setServicesPanelStatus(
-      services.length ? "" : "No services are available right now.",
+    setServicesTableLoading(
       false,
+      services.length ? "" : "No services are available right now.",
       !services.length
     );
     servicesTableLoaded = true;
@@ -985,9 +998,9 @@ async function loadServices() {
       `;
     }
 
-    setServicesPanelStatus(
+    setServicesTableLoading(
+      true,
       "Unable to load services. Please refresh and try again.",
-      false,
       true
     );
 

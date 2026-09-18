@@ -932,7 +932,16 @@
 
       </div>
 
-      <div class="service-table-wrap">
+      <div
+        class="services-loading standalone-loading hidden"
+        id="servicesLoadingState"
+        aria-live="polite"
+      >
+        <span class="loading-spinner"></span>
+        Loading services...
+      </div>
+
+      <div class="service-table-wrap hidden" id="serviceTableWrap">
 
         <table>
 

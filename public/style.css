@@ -179,6 +179,7 @@ button,input,select{font:inherit}
 .tool-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.mini-card h3{margin:5px 0 2px;font-size:15px}.mini-card p{margin:0 0 14px;color:#7f8eb0;font-size:11px;line-height:1.6}
 .json-box{min-height:90px;margin:17px 0 0;padding:14px;overflow:auto;white-space:pre-wrap;border:1px solid rgba(91,123,255,.2);border-radius:11px;color:#b9caff;background:#050717;font:11px "DM Mono",monospace}
 .services-head{display:flex;align-items:flex-end;justify-content:space-between;gap:15px;margin-bottom:18px}.services-head h2{margin:5px 0 0;font:700 24px Orbitron,Inter,sans-serif}.services-head .search{max-width:270px;margin:0}
+.standalone-loading{margin:8px 0 18px;border:0;background:transparent}
 .services-catalog-card{min-height:150px;display:grid;place-items:center;margin-top:4px;padding:22px;border:1px solid rgba(91,123,255,.18);border-radius:14px;background:linear-gradient(135deg,rgba(12,20,57,.78),rgba(9,13,36,.62));box-shadow:inset 0 1px 0 rgba(255,255,255,.025)}
  .order-service-browser{margin:20px 0 16px;padding:15px;border:1px solid rgba(91,123,255,.2);border-radius:14px;background:rgba(5,9,29,.42)}
  .order-browser-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:13px}
