@@ -311,7 +311,7 @@ function updateServicePreview() {
     getServiceCategory(service);
 
   description.textContent =
-    String(service.desc || "").trim() ||
+    cleanServiceDescription(service.desc) ||
     "No description available for this service.";
 
   const numericRate = Number(
@@ -362,6 +362,14 @@ function updateServicePreview() {
   }
 
   updateCharge();
+}
+
+function cleanServiceDescription(value) {
+  return String(value || "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/?[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .trim();
 }
 
 function serviceMatchesPlatform(service, platform) {
