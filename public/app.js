@@ -7,6 +7,8 @@ let activeOrderCategory = "All";
 let serviceSearchTimer = null;
 let orderSearchTimer = null;
 let servicesLoading = false;
+let servicesTableLoaded = false;
+let servicesTableLoading = false;
 
 const serviceSelect = $("serviceSelect");
 const quantityInput = $("quantityInput");
@@ -82,6 +84,48 @@ function showServicesFilterLoading() {
       </td>
     </tr>
   `;
+}
+
+function showServicesTablePlaceholder() {
+  const body = $("servicesBody");
+  if (!body || servicesTableLoaded || servicesLoading) return;
+
+  body.innerHTML = `
+    <tr>
+      <td colspan="9">
+        <div class="services-loading services-table-placeholder">
+          Open the Services tab to load the service catalog.
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+function loadServicesTable() {
+  const body = $("servicesBody");
+  if (!body || servicesTableLoaded || servicesTableLoading) return;
+
+  if (!services.length) {
+    return;
+  }
+
+  servicesTableLoading = true;
+  body.innerHTML = `
+    <tr>
+      <td colspan="9">
+        <div class="services-loading">
+          <span class="loading-spinner"></span>
+          Loading services table...
+        </div>
+      </td>
+    </tr>
+  `;
+
+  window.setTimeout(() => {
+    renderServices();
+    servicesTableLoaded = true;
+    servicesTableLoading = false;
+  }, 80);
 }
 
 async function api(url, options = {}) {
@@ -872,6 +916,8 @@ function escapeHtml(value) {
 }
 
 async function loadServices() {
+  servicesTableLoaded = false;
+  servicesTableLoading = false;
   setServicesLoading(true);
 
   try {
@@ -900,8 +946,8 @@ async function loadServices() {
 
     renderCategories();
     renderOrderCategories();
-    renderServices();
     renderServiceSelect();
+    showServicesTablePlaceholder();
 
   } catch (error) {
     console.error(error);
@@ -1021,6 +1067,10 @@ function setupTabs() {
         );
       });
 
+      if (target === "services") {
+        loadServicesTable();
+      }
+
       const tabsElement =
         document.querySelector(".tabs");
 
@@ -1063,7 +1113,9 @@ function setPlatform(platform) {
 
   renderCategories();
   renderOrderCategories();
-  renderServices();
+  if (servicesTableLoaded) {
+    renderServices();
+  }
   renderServiceSelect();
 }
 
@@ -1696,6 +1748,8 @@ function setupSearch() {
 
   search.addEventListener("input", () => {
     clearTimeout(serviceSearchTimer);
+    if (!servicesTableLoaded) return;
+
     showServicesFilterLoading();
 
     serviceSearchTimer = setTimeout(() => {
