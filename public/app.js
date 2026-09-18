@@ -63,11 +63,24 @@ function setServicesLoading(loading) {
       `;
     }
 
+    setServicesPanelStatus("Loading live services...", true);
+
     if (select) {
       select.innerHTML =
         `<option value="">Loading services...</option>`;
     }
   }
+}
+
+function setServicesPanelStatus(message, loading = false, error = false) {
+  const status = $("servicesPanelStatus");
+  if (!status) return;
+
+  status.className = `services-loading${error ? " services-loading-error" : ""}`;
+  status.innerHTML = `
+    ${loading ? '<span class="loading-spinner"></span>' : ""}
+    ${escapeHtml(message)}
+  `;
 }
 
 function showServicesFilterLoading() {
@@ -87,42 +100,30 @@ function showServicesFilterLoading() {
 }
 
 function showServicesTablePlaceholder() {
-  const body = $("servicesBody");
-  if (!body || servicesTableLoaded || servicesLoading) return;
-
-  body.innerHTML = `
-    <tr>
-      <td colspan="9">
-        <div class="services-loading services-table-placeholder">
-          Open the Services tab to load the service catalog.
-        </div>
-      </td>
-    </tr>
-  `;
+  if (servicesTableLoaded || servicesLoading) return;
+  setServicesPanelStatus(
+    "Open the Services tab to load the service catalog."
+  );
 }
 
-function loadServicesTable() {
-  const body = $("servicesBody");
-  if (!body || servicesTableLoaded || servicesTableLoading) return;
-
-  if (!services.length) {
-    return;
-  }
+async function loadServicesTable() {
+  if (servicesTableLoaded || servicesTableLoading) return;
 
   servicesTableLoading = true;
-  body.innerHTML = `
-    <tr>
-      <td colspan="9">
-        <div class="services-loading">
-          <span class="loading-spinner"></span>
-          Loading services table...
-        </div>
-      </td>
-    </tr>
-  `;
+  setServicesPanelStatus("Loading services...", true);
+
+  if (!services.length && !servicesLoading) {
+    await loadServices();
+  }
 
   window.setTimeout(() => {
-    renderServices();
+    setServicesPanelStatus(
+      services.length
+        ? `${services.length} services are ready in New Order.`
+        : "No services are available right now.",
+      false,
+      !services.length
+    );
     servicesTableLoaded = true;
     servicesTableLoading = false;
   }, 80);
@@ -965,6 +966,12 @@ async function loadServices() {
       `;
     }
 
+    setServicesPanelStatus(
+      "Unable to load services. Please refresh and try again.",
+      false,
+      true
+    );
+
     serviceSelect.innerHTML = `
       <option value="">
         Unable to load services
@@ -1113,9 +1120,6 @@ function setPlatform(platform) {
 
   renderCategories();
   renderOrderCategories();
-  if (servicesTableLoaded) {
-    renderServices();
-  }
   renderServiceSelect();
 }
 
