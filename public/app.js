@@ -570,8 +570,8 @@ function renderServiceSelect() {
 }
 
 function renderOrderCategories() {
-  const row = $("orderCategoryRow");
-  if (!row) return;
+  const select = $("orderCategorySelect");
+  if (!select) return;
 
   const categories = [
     "All",
@@ -586,23 +586,19 @@ function renderOrderCategories() {
     activeOrderCategory = "All";
   }
 
-  row.innerHTML = "";
+  select.innerHTML = "";
 
   categories.forEach(category => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `category-btn ${category === activeOrderCategory ? "active" : ""}`;
-    button.textContent = category;
-    button.setAttribute("aria-pressed", category === activeOrderCategory ? "true" : "false");
-
-    button.addEventListener("click", () => {
-      activeOrderCategory = category;
-      renderOrderCategories();
-      renderServiceSelect();
-    });
-
-    row.appendChild(button);
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent =
+      category === "All"
+        ? "All categories"
+        : category;
+    select.appendChild(option);
   });
+
+  select.value = activeOrderCategory;
 }
 
 function renderCategories() {
@@ -1118,7 +1114,12 @@ function renderStatusCard(id, data) {
   card.className =
     "result-card";
 
-  if (data.error) {
+  const statusData =
+    data && typeof data === "object"
+      ? data
+      : { status: data };
+
+  if (statusData.error) {
     card.innerHTML = `
       <div class="result-id">
         ORDER #${escapeHtml(id)}
@@ -1127,7 +1128,7 @@ function renderStatusCard(id, data) {
       <div class="result-row">
         <span>Error</span>
         <b class="danger-text">
-          ${escapeHtml(data.error)}
+          ${escapeHtml(statusData.error)}
         </b>
       </div>
     `;
@@ -1142,25 +1143,25 @@ function renderStatusCard(id, data) {
 
     <div class="result-row">
       <span>Status</span>
-      <b>${escapeHtml(data.status || "—")}</b>
+      <b>${escapeHtml(statusData.status || "—")}</b>
     </div>
 
     <div class="result-row">
       <span>Charge</span>
       <b>
-        ${escapeHtml(data.charge || "—")}
-        ${escapeHtml(data.currency || "")}
+        ${escapeHtml(statusData.charge || "—")}
+        ${escapeHtml(statusData.currency || "")}
       </b>
     </div>
 
     <div class="result-row">
       <span>Start Count</span>
-      <b>${escapeHtml(data.start_count ?? "—")}</b>
+      <b>${escapeHtml(statusData.start_count ?? "—")}</b>
     </div>
 
     <div class="result-row">
       <span>Remains</span>
-      <b>${escapeHtml(data.remains ?? "—")}</b>
+      <b>${escapeHtml(statusData.remains ?? "—")}</b>
     </div>
   `;
 
@@ -1546,6 +1547,16 @@ function setupOrderSearch() {
   });
 }
 
+function setupOrderCategory() {
+  const select = $("orderCategorySelect");
+  if (!select) return;
+
+  select.addEventListener("change", () => {
+    activeOrderCategory = select.value || "All";
+    renderServiceSelect();
+  });
+}
+
 function setupRefresh() {
   const button =
     $("refreshBtn");
@@ -1604,6 +1615,7 @@ async function startApp() {
   setupForms();
   setupSearch();
   setupOrderSearch();
+  setupOrderCategory();
   setupRefresh();
   setupMediaButtons();
 

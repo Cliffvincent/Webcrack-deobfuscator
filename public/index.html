@@ -367,7 +367,13 @@
         </button>
 
         <button class="media-btn" data-platform="spotify" type="button">
-          <span class="media-icon spotify">●</span>
+          <span class="media-icon spotify" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img">
+              <path d="M6.1 9.1c3.8-1.2 7.8-.9 11.5.6" />
+              <path d="M6.8 12.3c3.1-1 6.4-.7 9.4.5" />
+              <path d="M7.6 15.3c2.5-.7 5.1-.5 7.4.4" />
+            </svg>
+          </span>
           <span>Spotify</span>
         </button>
 
@@ -412,11 +418,13 @@
 
       <div class="order-service-browser order-category-browser">
         <div class="media-title">SELECT CATEGORY</div>
-        <div
-          class="category-row order-category-row"
-          id="orderCategoryRow"
+        <select
+          class="category-select"
+          id="orderCategorySelect"
           aria-label="Service categories"
-        ></div>
+        >
+          <option value="All">All categories</option>
+        </select>
       </div>
 
       <div class="order-layout">
@@ -870,7 +878,13 @@
         </button>
 
         <button class="media-btn" data-platform="spotify" type="button">
-          <span class="media-icon spotify">●</span>
+          <span class="media-icon spotify" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img">
+              <path d="M6.1 9.1c3.8-1.2 7.8-.9 11.5.6" />
+              <path d="M6.8 12.3c3.1-1 6.4-.7 9.4.5" />
+              <path d="M7.6 15.3c2.5-.7 5.1-.5 7.4.4" />
+            </svg>
+          </span>
           <span>Spotify</span>
         </button>
 

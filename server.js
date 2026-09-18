@@ -312,10 +312,24 @@ app.post("/api/status", async (req, res) => {
       });
     }
 
-    res.json(await provider({
-      action: "status",
-      orders: orders.join(",")
-    }));
+    const results = {};
+
+    await Promise.all(
+      orders.map(async order => {
+        try {
+          results[order] = await provider({
+            action: "status",
+            order
+          });
+        } catch (error) {
+          results[order] = {
+            error: error.message || "Failed to check this order."
+          };
+        }
+      })
+    );
+
+    res.json(results);
   } catch (error) {
     sendError(res, error);
   }
